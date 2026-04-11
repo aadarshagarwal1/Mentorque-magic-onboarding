@@ -1,8 +1,8 @@
 kind = "web"
 previewPath = "/"
-title = "Mentorwe Onboarding"
+title = "mentorque Onboarding"
 version = "1.0.0"
-id = "artifacts/mentorwe-onboarding"
+id = "artifacts/mentorque-onboarding"
 router = "path"
 
 [[integratedSkills]]
@@ -15,11 +15,11 @@ paths = [ "/" ]
 localPort = 25391
 
 [services.development]
-run = "pnpm --filter @workspace/mentorwe-onboarding run dev"
+run = "pnpm --filter @workspace/mentorque-onboarding run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/mentorwe-onboarding", "run", "build" ]
-publicDir = "artifacts/mentorwe-onboarding/dist/public"
+build = [ "pnpm", "--filter", "@workspace/mentorque-onboarding", "run", "build" ]
+publicDir = "artifacts/mentorque-onboarding/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]

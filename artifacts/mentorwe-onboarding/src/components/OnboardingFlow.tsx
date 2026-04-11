@@ -20,7 +20,6 @@ import {
   ArrowLeft,
   X,
   AlertCircle,
-  PartyPopper,
   Loader,
   Briefcase,
   MapPin,
@@ -281,19 +280,20 @@ const GradientBackground = () => (
       className="absolute top-0 left-0 w-full h-full"
     >
       <defs>
+        {/* Ambient bubbles: black + blue only (fixed HSL blues ~218–232°) */}
         <linearGradient id="rev_grad1" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop
             offset="0%"
             style={{
-              stopColor: "var(--color-primary)",
-              stopOpacity: 0.8,
+              stopColor: "hsl(225 88% 52%)",
+              stopOpacity: 0.45,
             }}
           />
           <stop
             offset="100%"
             style={{
-              stopColor: "var(--color-chart-3)",
-              stopOpacity: 0.6,
+              stopColor: "#000000",
+              stopOpacity: 0.78,
             }}
           />
         </linearGradient>
@@ -301,22 +301,22 @@ const GradientBackground = () => (
           <stop
             offset="0%"
             style={{
-              stopColor: "var(--color-chart-4)",
-              stopOpacity: 0.9,
+              stopColor: "#000000",
+              stopOpacity: 0.72,
             }}
           />
           <stop
             offset="50%"
             style={{
-              stopColor: "var(--color-secondary)",
-              stopOpacity: 0.7,
+              stopColor: "hsl(220 75% 42%)",
+              stopOpacity: 0.55,
             }}
           />
           <stop
             offset="100%"
             style={{
-              stopColor: "var(--color-chart-1)",
-              stopOpacity: 0.6,
+              stopColor: "hsl(230 90% 48%)",
+              stopOpacity: 0.4,
             }}
           />
         </linearGradient>
@@ -324,15 +324,15 @@ const GradientBackground = () => (
           <stop
             offset="0%"
             style={{
-              stopColor: "var(--color-destructive)",
-              stopOpacity: 0.8,
+              stopColor: "hsl(218 85% 46%)",
+              stopOpacity: 0.55,
             }}
           />
           <stop
             offset="100%"
             style={{
-              stopColor: "var(--color-chart-5)",
-              stopOpacity: 0.4,
+              stopColor: "#000000",
+              stopOpacity: 0.65,
             }}
           />
         </radialGradient>
@@ -399,9 +399,9 @@ const GradientBackground = () => (
           cy="150"
           rx="180"
           ry="120"
-          fill="var(--color-accent)"
+          fill="hsl(222 80% 38%)"
           filter="url(#rev_blur2)"
-          opacity="0.8"
+          opacity="0.65"
         />
       </g>
     </svg>
@@ -411,10 +411,11 @@ const GradientBackground = () => (
 const GLASS_STYLES = `
   input[type="password"]::-ms-reveal, input[type="password"]::-ms-clear { display: none !important; }
   input[type="password"]::-webkit-credentials-auto-fill-button, input[type="password"]::-webkit-strong-password-auto-fill-button { display: none !important; }
-  input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active { -webkit-box-shadow: 0 0 0 30px transparent inset !important; -webkit-text-fill-color: var(--foreground) !important; background-color: transparent !important; background-clip: content-box !important; transition: background-color 5000s ease-in-out 0s !important; color: var(--foreground) !important; caret-color: var(--foreground) !important; }
-  input:autofill { background-color: transparent !important; background-clip: content-box !important; -webkit-text-fill-color: var(--foreground) !important; color: var(--foreground) !important; }
-  input:-internal-autofill-selected { background-color: transparent !important; background-image: none !important; color: var(--foreground) !important; -webkit-text-fill-color: var(--foreground) !important; }
-  input:-webkit-autofill::first-line { color: var(--foreground) !important; -webkit-text-fill-color: var(--foreground) !important; }
+  /* --foreground is HSL components only; must use hsl() for valid color (avoids black typed text). */
+  input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active { -webkit-box-shadow: 0 0 0 30px transparent inset !important; -webkit-text-fill-color: hsl(var(--foreground)) !important; background-color: transparent !important; background-clip: content-box !important; transition: background-color 5000s ease-in-out 0s !important; color: hsl(var(--foreground)) !important; caret-color: hsl(var(--foreground)) !important; }
+  input:autofill { background-color: transparent !important; background-clip: content-box !important; -webkit-text-fill-color: hsl(var(--foreground)) !important; color: hsl(var(--foreground)) !important; }
+  input:-internal-autofill-selected { background-color: transparent !important; background-image: none !important; color: hsl(var(--foreground)) !important; -webkit-text-fill-color: hsl(var(--foreground)) !important; }
+  input:-webkit-autofill::first-line { color: hsl(var(--foreground)) !important; -webkit-text-fill-color: hsl(var(--foreground)) !important; }
   @property --angle-1 { syntax: "<angle>"; inherits: false; initial-value: -75deg; }
   @property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
   .glass-button-wrap { --anim-time: 400ms; --anim-ease: cubic-bezier(0.25, 1, 0.5, 1); --border-width: clamp(1px, 0.0625em, 4px); position: relative; z-index: 2; transform-style: preserve-3d; transition: transform var(--anim-time) var(--anim-ease); }
@@ -432,6 +433,8 @@ const GLASS_STYLES = `
   .glass-input { display: flex; position: relative; width: 100%; align-items: center; gap: 0.5rem; border-radius: 9999px; padding: 0.25rem; -webkit-tap-highlight-color: transparent; backdrop-filter: blur(clamp(1px, 0.125em, 4px)); transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1); background: linear-gradient(-75deg, oklch(from var(--background) l c h / 5%), oklch(from var(--background) l c h / 20%), oklch(from var(--background) l c h / 5%)); box-shadow: inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), inset 0 -0.125em 0.125em oklch(from var(--background) l c h / 50%), 0 0.25em 0.125em -0.125em oklch(from var(--foreground) l c h / 20%), 0 0 0.1em 0.25em inset oklch(from var(--background) l c h / 20%), 0 0 0 0 oklch(from var(--background) l c h); }
   .glass-input-wrap:focus-within .glass-input { backdrop-filter: blur(0.01em); box-shadow: inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), inset 0 -0.125em 0.125em oklch(from var(--background) l c h / 50%), 0 0.15em 0.05em -0.1em oklch(from var(--foreground) l c h / 25%), 0 0 0.05em 0.1em inset oklch(from var(--background) l c h / 50%), 0 0 0 0 oklch(from var(--background) l c h); }
   .glass-input::after { content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 9999px; width: calc(100% + clamp(1px, 0.0625em, 4px)); height: calc(100% + clamp(1px, 0.0625em, 4px)); top: calc(0% - clamp(1px, 0.0625em, 4px) / 2); left: calc(0% - clamp(1px, 0.0625em, 4px) / 2); padding: clamp(1px, 0.0625em, 4px); box-sizing: border-box; background: conic-gradient(from var(--angle-1) at 50% 50%, oklch(from var(--foreground) l c h / 50%) 0%, transparent 5% 40%, oklch(from var(--foreground) l c h / 50%) 50%, transparent 60% 95%, oklch(from var(--foreground) l c h / 50%) 100%), linear-gradient(180deg, oklch(from var(--background) l c h / 50%), oklch(from var(--background) l c h / 50%)); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; pointer-events: none; }
+  .glass-input input, .glass-textarea textarea, .glass-select { color: hsl(var(--foreground)) !important; caret-color: hsl(var(--foreground)); -webkit-text-fill-color: hsl(var(--foreground)); }
+  .glass-input input::placeholder, .glass-textarea textarea::placeholder { color: hsl(var(--foreground) / 0.55); -webkit-text-fill-color: hsl(var(--foreground) / 0.55); opacity: 1; }
   .glass-input input { padding: 0.75rem 0.25rem; }
   .glass-textarea-wrap { position: relative; z-index: 2; transform-style: preserve-3d; border-radius: 1rem; }
   .glass-textarea { display: flex; position: relative; width: 100%; align-items: flex-start; gap: 0.5rem; border-radius: 1rem; padding: 0.25rem; -webkit-tap-highlight-color: transparent; backdrop-filter: blur(clamp(1px, 0.125em, 4px)); transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1); background: linear-gradient(-75deg, oklch(from var(--background) l c h / 5%), oklch(from var(--background) l c h / 20%), oklch(from var(--background) l c h / 5%)); box-shadow: inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), inset 0 -0.125em 0.125em oklch(from var(--background) l c h / 50%), 0 0.25em 0.125em -0.125em oklch(from var(--foreground) l c h / 20%), 0 0 0.1em 0.25em inset oklch(from var(--background) l c h / 20%); }
@@ -465,6 +468,10 @@ const STEPS: OnboardingStep[] = [
   "submitted",
 ];
 
+/** Wider column, responsive; parent uses flex + justify-center to center each step */
+const STEP_OUTER =
+  "relative z-10 flex w-full min-w-0 max-w-2xl flex-col items-center mx-auto p-4 px-6 sm:px-8";
+
 const TEXT_LOOP_INTERVAL = 1.5;
 
 const submittingSteps = [
@@ -479,10 +486,6 @@ const submittingSteps = [
   {
     message: "Matching with mentors...",
     icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
-  },
-  {
-    message: "You're all set!",
-    icon: <PartyPopper className="w-12 h-12 text-green-500" />,
   },
 ];
 
@@ -716,7 +719,7 @@ function SubmittedScreen({ email }: { email: string }) {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="relative z-10 flex flex-col items-center gap-10 w-[340px] mx-auto p-4 text-center"
+      className={cn(STEP_OUTER, "gap-10 text-center")}
     >
       <motion.div variants={itemVariants} className="relative flex items-center justify-center">
         <motion.div
@@ -866,21 +869,21 @@ function SubmittedScreen({ email }: { email: string }) {
   );
 }
 
-const MentorweLogo = () => (
-  <div className="bg-primary text-primary-foreground rounded-md p-1.5">
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-      <path d="M2 17l10 5 10-5" />
-      <path d="M2 12l10 5 10-5" />
-    </svg>
-  </div>
+const MentorqueLogo = () => (
+  <img
+    src="/mentorque-logo.png"
+    alt=""
+    width={32}
+    height={32}
+    className="h-8 w-8 shrink-0 rounded-md object-cover invert opacity-95"
+  />
 );
 
 export function OnboardingFlow() {
   const [step, setStep] = useState<OnboardingStep>("login");
-  const [modalStatus, setModalStatus] = useState<
-    "closed" | "loading" | "success"
-  >("closed");
+  const [modalStatus, setModalStatus] = useState<"closed" | "loading">(
+    "closed"
+  );
   const confettiRef = useRef<ConfettiRef>(null);
 
   const [email, setEmail] = useState("");
@@ -968,10 +971,10 @@ export function OnboardingFlow() {
   const handleFinalSubmit = () => {
     setModalStatus("loading");
     const totalDuration =
-      (submittingSteps.length - 1) * TEXT_LOOP_INTERVAL * 1000;
+      submittingSteps.length * TEXT_LOOP_INTERVAL * 1000;
     setTimeout(() => {
       fireSideCanons();
-      setModalStatus("success");
+      setModalStatus("closed");
       setStep("submitted");
     }, totalDuration);
   };
@@ -980,20 +983,30 @@ export function OnboardingFlow() {
     <AnimatePresence>
       {modalStatus !== "closed" && (
         <motion.div
+          key="submit-modal"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[1000] flex min-h-[100dvh] w-screen items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Saving your profile"
         >
+          <div
+            className="absolute inset-0 bg-background/95 backdrop-blur-md"
+            aria-hidden
+          />
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="relative bg-card/80 border-4 border-border rounded-2xl p-8 w-full max-w-sm flex flex-col items-center gap-4 mx-4"
+            exit={{ scale: 0.94, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
+            className="relative z-10 w-full max-w-sm rounded-2xl border-4 border-border bg-card p-8 shadow-2xl flex flex-col items-center gap-4"
           >
             {modalStatus === "loading" && (
               <TextLoop interval={TEXT_LOOP_INTERVAL} stopOnEnd={true}>
-                {submittingSteps.slice(0, -1).map((s, i) => (
+                {submittingSteps.map((s, i) => (
                   <div key={i} className="flex flex-col items-center gap-4">
                     {s.icon}
                     <p className="text-lg font-medium text-foreground text-center">
@@ -1002,14 +1015,6 @@ export function OnboardingFlow() {
                   </div>
                 ))}
               </TextLoop>
-            )}
-            {modalStatus === "success" && (
-              <div className="flex flex-col items-center gap-4">
-                {submittingSteps[submittingSteps.length - 1].icon}
-                <p className="text-lg font-medium text-foreground text-center">
-                  {submittingSteps[submittingSteps.length - 1].message}
-                </p>
-              </div>
             )}
           </motion.div>
         </motion.div>
@@ -1031,13 +1036,13 @@ export function OnboardingFlow() {
       <Confetti
         ref={confettiRef}
         manualstart
-        className="fixed top-0 left-0 w-full h-full pointer-events-none z-[999]"
+        className="pointer-events-none fixed inset-0 z-[990] h-full w-full"
       />
       <Modal />
 
       <div className="fixed top-4 left-4 z-20 flex items-center gap-2">
-        <MentorweLogo />
-        <h1 className="text-base font-bold text-foreground">mentorwe</h1>
+        <MentorqueLogo />
+        <h1 className="text-base font-bold text-foreground">mentorque</h1>
       </div>
 
       <div className="fixed top-3 left-1/2 -translate-x-1/2 z-20">
@@ -1099,7 +1104,7 @@ export function OnboardingFlow() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -10, opacity: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative z-10 flex flex-col items-center gap-8 w-[300px] mx-auto p-4"
+              className={cn(STEP_OUTER, "gap-8")}
             >
               <AnimatePresence mode="wait">
                 {loginPhase === "email" && (
@@ -1305,7 +1310,7 @@ export function OnboardingFlow() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -10, opacity: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative z-10 flex flex-col items-center gap-8 w-[340px] mx-auto p-4"
+              className={cn(STEP_OUTER, "gap-8")}
             >
               <div className="w-full flex flex-col items-center gap-3">
                 <BlurFade delay={0.05} className="w-full">
@@ -1409,7 +1414,10 @@ export function OnboardingFlow() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -10, opacity: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative z-10 flex flex-col items-center gap-8 w-[340px] mx-auto p-4 max-h-screen overflow-y-auto py-20"
+              className={cn(
+                STEP_OUTER,
+                "gap-8 max-h-screen overflow-y-auto py-20"
+              )}
             >
               <div className="w-full flex flex-col items-center gap-3">
                 <BlurFade delay={0.05} className="w-full">
@@ -1570,7 +1578,10 @@ export function OnboardingFlow() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -10, opacity: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative z-10 flex flex-col items-center gap-8 w-[340px] mx-auto p-4 max-h-screen overflow-y-auto py-20"
+              className={cn(
+                STEP_OUTER,
+                "gap-8 max-h-screen overflow-y-auto py-20"
+              )}
             >
               <div className="w-full flex flex-col items-center gap-3">
                 <BlurFade delay={0.05} className="w-full">

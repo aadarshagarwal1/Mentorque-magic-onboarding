@@ -606,6 +606,260 @@ function GlassSelect({
   );
 }
 
+function SubmittedScreen({ email }: { email: string }) {
+  const words = ["Our", "team", "will", "reach", "out", "shortly."];
+
+  const containerVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.12, delayChildren: 0.4 } },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 24, opacity: 0, filter: "blur(8px)" },
+    visible: {
+      y: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      transition: { duration: 0.55, ease: [0.25, 1, 0.5, 1] },
+    },
+  };
+
+  const wordVariants: Variants = {
+    hidden: { y: 16, opacity: 0 },
+    visible: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      transition: { delay: 0.85 + i * 0.07, duration: 0.4, ease: "easeOut" },
+    }),
+  };
+
+  const ringVariants: Variants = {
+    hidden: { scale: 0.6, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: { duration: 0.6, ease: [0.34, 1.56, 0.64, 1] },
+    },
+  };
+
+  const iconVariants: Variants = {
+    hidden: { scale: 0, rotate: -20, opacity: 0 },
+    visible: {
+      scale: 1,
+      rotate: 0,
+      opacity: 1,
+      transition: { delay: 0.15, duration: 0.55, ease: [0.34, 1.56, 0.64, 1] },
+    },
+  };
+
+  const checkmarkVariants: Variants = {
+    hidden: { pathLength: 0, opacity: 0 },
+    visible: {
+      pathLength: 1,
+      opacity: 1,
+      transition: { delay: 0.5, duration: 0.5, ease: "easeInOut" },
+    },
+  };
+
+  const floatVariants: Variants = {
+    animate: {
+      y: [0, -8, 0],
+      transition: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+    },
+  };
+
+  const pulseVariants: Variants = {
+    animate: {
+      scale: [1, 1.12, 1],
+      opacity: [0.35, 0.15, 0.35],
+      transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+    },
+  };
+
+  const orb1Variants: Variants = {
+    hidden: { scale: 0, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: { delay: 0.2, duration: 0.8, ease: "easeOut" },
+    },
+    animate: {
+      x: [0, 6, -4, 0],
+      y: [0, -8, 4, 0],
+      transition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+    },
+  };
+
+  const orb2Variants: Variants = {
+    hidden: { scale: 0, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: { delay: 0.35, duration: 0.8, ease: "easeOut" },
+    },
+    animate: {
+      x: [0, -5, 7, 0],
+      y: [0, 6, -6, 0],
+      transition: { duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 },
+    },
+  };
+
+  return (
+    <motion.div
+      key="submitted"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="relative z-10 flex flex-col items-center gap-10 w-[340px] mx-auto p-4 text-center"
+    >
+      <motion.div variants={itemVariants} className="relative flex items-center justify-center">
+        <motion.div
+          variants={orb1Variants}
+          animate="animate"
+          className="absolute w-48 h-48 rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)",
+            filter: "blur(20px)",
+          }}
+        />
+        <motion.div
+          variants={orb2Variants}
+          animate="animate"
+          className="absolute w-32 h-32 rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--accent) / 0.3) 0%, transparent 70%)",
+            filter: "blur(16px)",
+            transform: "translate(30px, 20px)",
+          }}
+        />
+
+        <motion.div
+          variants={pulseVariants}
+          animate="animate"
+          className="absolute w-36 h-36 rounded-full border"
+          style={{ borderColor: "hsl(var(--primary) / 0.4)" }}
+        />
+        <motion.div
+          variants={pulseVariants}
+          animate="animate"
+          className="absolute w-28 h-28 rounded-full border"
+          style={{
+            borderColor: "hsl(var(--primary) / 0.5)",
+            animationDelay: "0.4s",
+          }}
+        />
+
+        <motion.div
+          variants={ringVariants}
+          className="relative w-24 h-24 rounded-full"
+          style={{
+            background:
+              "linear-gradient(-75deg, oklch(from var(--background) l c h / 8%), oklch(from var(--background) l c h / 20%), oklch(from var(--background) l c h / 8%))",
+            boxShadow:
+              "inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), 0 0 0 1px oklch(from var(--foreground) l c h / 12%), 0 0.5em 2em oklch(from var(--primary) l c h / 0.3)",
+          }}
+        >
+          <motion.div
+            variants={iconVariants}
+            className="w-full h-full flex items-center justify-center"
+          >
+            <motion.div variants={floatVariants} animate="animate">
+              <svg viewBox="0 0 40 40" className="w-10 h-10" fill="none">
+                <motion.circle
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="2"
+                  variants={checkmarkVariants}
+                  style={{ pathLength: 0 }}
+                />
+                <motion.path
+                  d="M13 20.5l5 5 9-10"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  variants={checkmarkVariants}
+                  style={{ pathLength: 0 }}
+                />
+              </svg>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      <div className="flex flex-col items-center gap-5">
+        <motion.p
+          variants={itemVariants}
+          className="font-serif font-light text-4xl sm:text-5xl tracking-tight text-foreground"
+        >
+          You're in!
+        </motion.p>
+
+        <motion.div
+          className="flex flex-wrap justify-center gap-x-2 gap-y-0"
+          initial="hidden"
+          animate="visible"
+        >
+          {words.map((word, i) => (
+            <motion.span
+              key={i}
+              custom={i}
+              variants={wordVariants}
+              className="text-2xl font-light text-foreground/70 tracking-tight"
+              style={{ fontFamily: "var(--app-font-serif)" }}
+            >
+              {word}
+            </motion.span>
+          ))}
+        </motion.div>
+
+        <motion.div
+          variants={itemVariants}
+          className="space-y-3"
+        >
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+            We're reviewing your profile and will send you a tailored resume strategy within{" "}
+            <span className="text-foreground font-medium">24 hours</span>.
+          </p>
+          {email && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5, duration: 0.5 }}
+              className="text-xs text-muted-foreground/60"
+            >
+              Confirmation sent to{" "}
+              <span className="text-foreground/70 font-medium">{email}</span>
+            </motion.p>
+          )}
+        </motion.div>
+
+        <motion.div
+          variants={itemVariants}
+          className="flex gap-2 mt-2"
+        >
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: "hsl(var(--primary))" }}
+              animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+              transition={{
+                duration: 1.2,
+                repeat: Infinity,
+                delay: i * 0.2,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
 const MentorweLogo = () => (
   <div className="bg-primary text-primary-foreground rounded-md p-1.5">
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1399,38 +1653,7 @@ export function OnboardingFlow() {
           )}
 
           {step === "submitted" && (
-            <motion.div
-              key="submitted"
-              initial={{ y: 10, opacity: 0, scale: 0.97 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
-              className="relative z-10 flex flex-col items-center gap-8 w-[340px] mx-auto p-4 text-center"
-            >
-              <BlurFade delay={0.3}>
-                <div className="flex flex-col items-center gap-6">
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center"
-                    style={{
-                      background: "linear-gradient(-75deg, oklch(from var(--background) l c h / 10%), oklch(from var(--background) l c h / 25%), oklch(from var(--background) l c h / 10%))",
-                      boxShadow: "inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), 0 0.25em 0.5em oklch(from var(--foreground) l c h / 15%)",
-                    }}
-                  >
-                    <PartyPopper className="w-10 h-10 text-primary" />
-                  </div>
-                  <p className="font-serif font-light text-4xl sm:text-5xl tracking-tight text-foreground">
-                    You're in!
-                  </p>
-                  <p className="text-base text-muted-foreground max-w-xs leading-relaxed">
-                    Our team is reviewing your profile. We'll reach out within{" "}
-                    <span className="text-foreground font-medium">24 hours</span>{" "}
-                    with your personalized resume strategy.
-                  </p>
-                  <p className="text-sm text-muted-foreground/70">
-                    Check your inbox at{" "}
-                    <span className="text-foreground/80 font-medium">{email}</span>
-                  </p>
-                </div>
-              </BlurFade>
-            </motion.div>
+            <SubmittedScreen email={email} />
           )}
         </AnimatePresence>
       </div>

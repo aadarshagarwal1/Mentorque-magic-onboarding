@@ -56,9 +56,9 @@ catalog:
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
   # Must be this exact version because expo requires it
-  react: 19.1.0
+  react: 19.2.5
   # Must be this exact version because expo requires it
-  react-dom: 19.1.0
+  react-dom: 19.2.5
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
@@ -74,6 +74,8 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  react: 19.2.5
+  react-dom: 19.2.5
   # Optional native binaries: exclude non-linux platforms to shrink Linux (e.g. Replit) installs.
   # Do not exclude darwin-* — local macOS dev needs @esbuild/* / rollup / lightningcss / oxide darwin builds.
   "esbuild>@esbuild/freebsd-arm64": "-"

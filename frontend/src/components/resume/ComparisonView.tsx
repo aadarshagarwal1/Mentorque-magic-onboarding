@@ -301,7 +301,12 @@ const CONTENT_STAGGER_VARIANTS = {
   },
 };
 
-function KeyChangesCard({ changes }: { changes: BulletChange[] }) {
+interface KeyChangesCardProps {
+  changes: BulletChange[];
+  onInsightFocus: (text: string | null) => void;
+}
+
+function KeyChangesCard({ changes, onInsightFocus }: KeyChangesCardProps) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -317,13 +322,23 @@ function KeyChangesCard({ changes }: { changes: BulletChange[] }) {
     setDir(d);
     setIdx(nextIdx);
     setDisplayIdx(nextIdx);
-    // Reset to diff view when navigating
-    if (isFlipped) setIsFlipped(false);
+    // Reset to diff view when navigating, and clear focus
+    if (isFlipped) {
+      setIsFlipped(false);
+      onInsightFocus(null);
+    }
   };
 
   const toggleFlip = () => {
+    const nextFlippedState = !isFlipped;
     setAnimAction("flip");
-    setIsFlipped((f) => !f);
+    setIsFlipped(nextFlippedState);
+    // If opening insight, send the revised text to highlight. If closing, clear it.
+    if (nextFlippedState && visible) {
+      onInsightFocus(visible.revised);
+    } else {
+      onInsightFocus(null);
+    }
   };
 
   return (
@@ -741,10 +756,22 @@ function CompanyFitCard({
                     <AnimatePresence mode="wait" initial={false}>
                       <motion.div
                         key={showResume ? "back" : "eye"}
-                        initial={{ opacity: 0, scale: 0.5, rotate: showResume ? -45 : 45 }}
+                        initial={{
+                          opacity: 0,
+                          scale: 0.5,
+                          rotate: showResume ? -45 : 45,
+                        }}
                         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0, scale: 0.5, rotate: showResume ? 45 : -45 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                        exit={{
+                          opacity: 0,
+                          scale: 0.5,
+                          rotate: showResume ? 45 : -45,
+                        }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 28,
+                        }}
                       >
                         {showResume ? (
                           <ChevronLeft className="w-5 h-5 transition-all duration-500 group-hover/preview:-translate-x-0.5" />
@@ -901,7 +928,13 @@ function MetricsCard({
 
 // ─── Report Panel (Section Specific Only) ──────────────────────────────────────────
 
-function SectionAnalysis({ changes }: { changes: BulletChange[] }) {
+function SectionAnalysis({
+  changes,
+  onInsightFocus,
+}: {
+  changes: BulletChange[];
+  onInsightFocus: (text: string | null) => void;
+}) {
   const sectionsWithChanges = useMemo(() => {
     return SECTION_ORDER.filter((s) => {
       const sectionChanges = changes.filter((c) => c.section === s);
@@ -1001,7 +1034,10 @@ function SectionAnalysis({ changes }: { changes: BulletChange[] }) {
             transition={{ type: "spring", stiffness: 300, damping: 32 }}
             className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full"
           >
-            <KeyChangesCard changes={sectionChanges} />
+            <KeyChangesCard
+              changes={sectionChanges}
+              onInsightFocus={onInsightFocus}
+            />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1021,6 +1057,7 @@ export function ComparisonView({
   const [studioComments, setStudioComments] = useState<StudioCommentItem[]>([]);
   const [focusHighlightId, setFocusHighlightId] = useState<string | null>(null);
   const [focusSignal, setFocusSignal] = useState(0);
+  const [insightFocusText, setInsightFocusText] = useState<string | null>(null);
   const documentId = compiledPdfUrl ?? "resume-draft";
 
   useEffect(() => {
@@ -1084,6 +1121,7 @@ export function ComparisonView({
             documentId={compiledPdfUrl ?? "resume-draft"}
             focusHighlightId={focusHighlightId}
             focusSignal={focusSignal}
+            focusedInsightText={insightFocusText}
           />
         </div>
 
@@ -1163,7 +1201,10 @@ export function ComparisonView({
 
               {/* Section-specific Analysis */}
               <div className="shrink-0">
-                <SectionAnalysis changes={changes} />
+                <SectionAnalysis
+                  changes={changes}
+                  onInsightFocus={setInsightFocusText}
+                />
               </div>
 
               {/* Proceed button — bottom of scroll */}

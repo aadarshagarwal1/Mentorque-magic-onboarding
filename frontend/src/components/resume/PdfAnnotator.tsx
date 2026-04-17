@@ -79,10 +79,10 @@ interface PendingSelection {
 interface PdfAnnotatorProps {
   pdfUrl: string | null;
   revampedResume: any;
-  /** Stable key used as `documentUrl` for the highlights store (e.g. the PDF URL or a session ID) */
   documentId: string;
   focusHighlightId?: string | null;
   focusSignal?: number;
+  focusedInsightText?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -128,14 +128,14 @@ function HighlightLayer({
                 borderRadius: 2,
               }}
               className={cn(
-                "transition-all duration-200",
+                "transition-all duration-300 border-l-2",
                 h.comments[0]?.type === "ai"
-                  ? "bg-violet-400/30 hover:bg-violet-400/50"
-                  : "bg-amber-400/30 hover:bg-amber-400/50",
-                activeId === h.id && "ring-2 ring-white/60"
+                  ? "bg-violet-500/20 border-violet-500/40 hover:bg-violet-500/30"
+                  : "bg-amber-500/20 border-amber-500/40 hover:bg-amber-500/30",
+                activeId === h.id && "ring-2 ring-white/40 shadow-[0_0_15px_rgba(255,255,255,0.1)]",
               )}
             />
-          ))
+          )),
         )}
     </>
   );
@@ -262,7 +262,9 @@ function SelectionPopup({
             <Sparkles className="w-3.5 h-3.5 text-violet-400 mt-0.5 shrink-0" />
             <p className="text-xs text-white/70 leading-relaxed">{aiText}</p>
           </div>
-          <p className="text-[10px] text-white/20 uppercase tracking-widest">Saved to highlights</p>
+          <p className="text-[10px] text-white/20 uppercase tracking-widest">
+            Saved to highlights
+          </p>
         </div>
       )}
     </motion.div>
@@ -291,7 +293,8 @@ function HighlightDetail({
       style={{
         left: `${anchor.leftPct}%`,
         top: `${anchor.topPct}%`,
-        transform: anchor.placement === "below" ? "translateX(-50%)" : undefined,
+        transform:
+          anchor.placement === "below" ? "translateX(-50%)" : undefined,
       }}
     >
       {/* caret */}
@@ -334,7 +337,7 @@ function HighlightDetail({
               "rounded-xl p-3 text-xs leading-relaxed",
               c.type === "ai"
                 ? "bg-violet-500/10 border border-violet-500/20 text-violet-200"
-                : "bg-amber-500/10 border border-amber-500/20 text-amber-200"
+                : "bg-amber-500/10 border border-amber-500/20 text-amber-200",
             )}
           >
             <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
@@ -344,7 +347,7 @@ function HighlightDetail({
                 <MessageSquare className="w-3 h-3" />
               )}
               <span className="text-[9px] font-black uppercase tracking-widest">
-                {c.type === "ai" ? "AI Review" : c.author ?? "You"}
+                {c.type === "ai" ? "AI Review" : (c.author ?? "You")}
               </span>
             </div>
             {c.text}
@@ -359,8 +362,13 @@ function HighlightDetail({
 
 function TextFallback({ resume: r }: { resume: any }) {
   if (!r) return null;
-  const name = `${r.personalInfo?.firstName ?? ""} ${r.personalInfo?.lastName ?? ""}`.trim();
-  const contact = [r.personalInfo?.email, r.personalInfo?.location, r.personalInfo?.phoneNumber]
+  const name =
+    `${r.personalInfo?.firstName ?? ""} ${r.personalInfo?.lastName ?? ""}`.trim();
+  const contact = [
+    r.personalInfo?.email,
+    r.personalInfo?.location,
+    r.personalInfo?.phoneNumber,
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -368,14 +376,20 @@ function TextFallback({ resume: r }: { resume: any }) {
     <div className="w-full text-[13px] leading-relaxed text-white/60 font-mono space-y-2">
       {name && (
         <div className="text-center pb-6 mb-8 border-b border-white/10">
-          <p className="text-white/90 font-bold text-2xl tracking-tight">{name}</p>
+          <p className="text-white/90 font-bold text-2xl tracking-tight">
+            {name}
+          </p>
           {contact && <p className="text-white/40 text-xs mt-2">{contact}</p>}
         </div>
       )}
       {r.professionalSummary && (
         <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Summary</p>
-          <p className="text-white/70 leading-relaxed">{r.professionalSummary}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">
+            Summary
+          </p>
+          <p className="text-white/70 leading-relaxed">
+            {r.professionalSummary}
+          </p>
         </div>
       )}
       {r.experience?.map((exp: any, i: number) => (
@@ -410,24 +424,33 @@ export function PdfAnnotator({
   documentId,
   focusHighlightId,
   focusSignal = 0,
+  focusedInsightText,
 }: PdfAnnotatorProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [containerWidth, setContainerWidth] = useState(400);
 
-  const outerRef = useRef<HTMLDivElement>(null);   // responsive width measurement
+  const outerRef = useRef<HTMLDivElement>(null); // responsive width measurement
   const pageWrapperRef = useRef<HTMLDivElement>(null); // for selection rect calculation
 
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [popupMode, setPopupMode] = useState<PopupMode>("menu");
   const [aiText, setAiText] = useState("");
-  const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
-  const [detailAnchor, setDetailAnchor] = useState<{ leftPct: number; topPct: number; placement: "right" | "below" }>({
+  const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(
+    null,
+  );
+  const [detailAnchor, setDetailAnchor] = useState<{
+    leftPct: number;
+    topPct: number;
+    placement: "right" | "below";
+  }>({
     leftPct: 70,
     topPct: 8,
     placement: "right",
   });
+
+  const [insightRects, setInsightRects] = useState<HighlightRect[]>([]);
 
   // ── Responsive width — fill the container as much as possible ──────────────
   useEffect(() => {
@@ -486,8 +509,139 @@ export function PdfAnnotator({
     setPageNumber(target.position.pageNumber || 1);
     focusHighlight(target);
     dismissPending();
-    pageWrapperRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [focusHighlightId, focusSignal, highlights, dismissPending, focusHighlight]);
+    pageWrapperRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [
+    focusHighlightId,
+    focusSignal,
+    highlights,
+    dismissPending,
+    focusHighlight,
+  ]);
+
+  // ── Insight focus from ComparisonView ───────────────────────────────────────
+  useEffect(() => {
+    if (!focusedInsightText || !pageWrapperRef.current) {
+      setInsightRects([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const textLayer = pageWrapperRef.current?.querySelector(
+        ".react-pdf__Page__textContent",
+      );
+      if (!textLayer) return;
+
+      const spans = Array.from(textLayer.querySelectorAll("span"));
+
+      const targetClean = focusedInsightText
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      if (!targetClean) return;
+
+      const containerRect = pageWrapperRef.current!.getBoundingClientRect();
+
+      const spanData = spans.map((span, index) => {
+        const rect = span.getBoundingClientRect();
+        const spanText = (span.textContent || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        return {
+          index,
+          rect,
+          spanText,
+          top: rect.top,
+          left: rect.left,
+          matchScore:
+            spanText.length > 0
+              ? targetClean.includes(spanText)
+                ? spanText.length
+                : 0
+              : 0,
+        };
+      });
+
+      const matchedSpans = spanData.filter((s) => s.matchScore > 0);
+
+      if (matchedSpans.length === 0) {
+        setInsightRects([]);
+        return;
+      }
+
+      matchedSpans.sort((a, b) => {
+        if (Math.abs(a.top - b.top) < 10) {
+          return a.left - b.left;
+        }
+        return a.top - b.top;
+      });
+
+      const mergedRects: { x1: number; y1: number; x2: number; y2: number }[] =
+        [];
+      let currentGroup = matchedSpans[0] ? [matchedSpans[0]] : [];
+
+      for (let i = 1; i < matchedSpans.length; i++) {
+        const prev = currentGroup[currentGroup.length - 1];
+        const curr = matchedSpans[i];
+
+        const isSameLine = Math.abs(curr.top - prev.top) < 15;
+        const isAdjacent = curr.left < prev.rect.right + 20;
+
+        if (isSameLine && isAdjacent) {
+          currentGroup.push(curr);
+        } else {
+          if (currentGroup.length > 0) {
+            const x1 = Math.min(...currentGroup.map((s) => s.left));
+            const y1 = Math.min(...currentGroup.map((s) => s.top));
+            const x2 = Math.max(...currentGroup.map((s) => s.rect.right));
+            const y2 = Math.max(...currentGroup.map((s) => s.rect.bottom));
+            mergedRects.push({ x1, y1, x2, y2 });
+          }
+          currentGroup = [curr];
+        }
+      }
+
+      if (currentGroup.length > 0) {
+        const x1 = Math.min(...currentGroup.map((s) => s.left));
+        const y1 = Math.min(...currentGroup.map((s) => s.top));
+        const x2 = Math.max(...currentGroup.map((s) => s.rect.right));
+        const y2 = Math.max(...currentGroup.map((s) => s.rect.bottom));
+        mergedRects.push({ x1, y1, x2, y2 });
+      }
+
+      const relativeRects = mergedRects.map((r) => {
+        const top = ((r.y1 - containerRect.top) / containerRect.height) * 100;
+        const left = ((r.x1 - containerRect.left) / containerRect.width) * 100;
+        const width = ((r.x2 - r.x1) / containerRect.width) * 100;
+        const height = ((r.y2 - r.y1) / containerRect.height) * 100;
+        return {
+          x1: left,
+          y1: top,
+          x2: left + width,
+          y2: top + height,
+          width,
+          height,
+        };
+      });
+
+      setInsightRects(relativeRects);
+
+      if (mergedRects.length > 0) {
+        const firstRect = mergedRects[0];
+        const wrapper = outerRef.current;
+        if (wrapper) {
+          const relativeTop = firstRect.y1 - containerRect.top;
+          wrapper.scrollTo({
+            top: Math.max(0, relativeTop - 100),
+            behavior: "smooth",
+          });
+        }
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [focusedInsightText, pageNumber]);
 
   // ── Text selection → pending annotation ────────────────────────────────────
   const handleMouseUp = useCallback(() => {
@@ -524,7 +678,7 @@ export function PdfAnnotator({
     const lastRect = clientRects[clientRects.length - 1];
     const popupX = Math.min(
       lastRect.left - containerRect.left,
-      containerRect.width - 288
+      containerRect.width - 288,
     );
     const popupY = lastRect.bottom - containerRect.top + 8;
 
@@ -541,11 +695,7 @@ export function PdfAnnotator({
 
   // ── Save highlight to backend ───────────────────────────────────────────────
   const saveHighlight = useCallback(
-    async (
-      comment: HighlightComment,
-      pos: HighlightPosition,
-      text: string
-    ) => {
+    async (comment: HighlightComment, pos: HighlightPosition, text: string) => {
       const res = await fetch("/api/highlights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -561,7 +711,7 @@ export function PdfAnnotator({
         setHighlights((h) => [...h, data.highlight]);
       }
     },
-    [documentId]
+    [documentId],
   );
 
   // ── Ask AI ──────────────────────────────────────────────────────────────────
@@ -583,7 +733,7 @@ export function PdfAnnotator({
       await saveHighlight(
         { type: "ai", text: suggestion, createdAt: new Date().toISOString() },
         pending.position,
-        pending.text
+        pending.text,
       );
     } catch {
       setAiText("Failed to get AI review. Please try again.");
@@ -600,13 +750,17 @@ export function PdfAnnotator({
       }
       if (!pending || !note.trim()) return;
       await saveHighlight(
-        { type: "human", text: note.trim(), createdAt: new Date().toISOString() },
+        {
+          type: "human",
+          text: note.trim(),
+          createdAt: new Date().toISOString(),
+        },
         pending.position,
-        pending.text
+        pending.text,
       );
       dismissPending();
     },
-    [pending, saveHighlight, dismissPending]
+    [pending, saveHighlight, dismissPending],
   );
 
   // ── Delete highlight ─────────────────────────────────────────────────────────
@@ -691,6 +845,30 @@ export function PdfAnnotator({
               }}
               activeId={activeHighlight?.id ?? null}
             />
+
+            {/* Persistent Insight Block Overlay */}
+            <AnimatePresence>
+              {insightRects.length > 0 &&
+                insightRects.map((rect, i) => (
+                  <motion.div
+                    key={`insight-${i}`}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                      position: "absolute",
+                      left: `${rect.x1}%`,
+                      top: `${rect.y1}%`,
+                      width: `${rect.width}%`,
+                      height: `${rect.height}%`,
+                      zIndex: 15,
+                      pointerEvents: "none",
+                    }}
+                    className="bg-emerald-500/20 border-l-2 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                  />
+                ))}
+            </AnimatePresence>
           </div>
         </Document>
 
@@ -734,7 +912,7 @@ export function PdfAnnotator({
               "p-2.5 rounded-xl transition-all duration-300",
               pageNumber <= 1
                 ? "text-white/5 cursor-not-allowed"
-                : "text-white/40 hover:text-white hover:bg-white/10 active:scale-90"
+                : "text-white/40 hover:text-white hover:bg-white/10 active:scale-90",
             )}
           >
             <ChevronLeft className="w-5 h-5" />
@@ -749,7 +927,7 @@ export function PdfAnnotator({
               "p-2.5 rounded-xl transition-all duration-300",
               pageNumber >= numPages
                 ? "text-white/5 cursor-not-allowed"
-                : "text-white/40 hover:text-white hover:bg-white/10 active:scale-90"
+                : "text-white/40 hover:text-white hover:bg-white/10 active:scale-90",
             )}
           >
             <ChevronRight className="w-5 h-5" />
@@ -766,7 +944,8 @@ export function PdfAnnotator({
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-amber-400/40" />
-            Notes ({highlights.filter((h) => h.comments[0]?.type === "human").length})
+            Notes (
+            {highlights.filter((h) => h.comments[0]?.type === "human").length})
           </div>
         </div>
       )}

@@ -1,9 +1,6 @@
-# Deploy this repo with Root Directory = repository root (Mentorque-magic-onboarding).
-# Service: API (Express). Install pnpm deps for the whole workspace, then build + run @workspace/api-server.
-
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build"
+buildCommand = "pnpm --filter @workspace/api-server run build"
 watchPatterns = [
   "backend/**",
   "lib/**",
@@ -11,6 +8,9 @@ watchPatterns = [
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
 ]
+
+[build.nixpacksPlan.phases.install]
+cmds = ["pnpm install --no-frozen-lockfile"]
 
 [deploy]
 startCommand = "pnpm --filter @workspace/api-server run start"

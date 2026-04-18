@@ -15,14 +15,28 @@
  *     return <ResumeRevampStep onComplete={goToNextStep} />;
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
+import {
+  ClipboardList,
+  Inbox,
+  LayoutTemplate,
+  Lightbulb,
+  MessageSquare,
+  Mic2,
+  Radar,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import { UploadPanel } from "../components/resume/UploadPanel";
 import { MentorqueLoader } from "../components/resume/MentorqueLoader";
 import { QuestionsForm } from "../components/resume/QuestionsForm";
 import { ComparisonView } from "../components/resume/ComparisonView";
-import { RevealRotatingCards } from "../components/resume/RevealRotatingCards";
-import { cn } from "@/lib/utils";
+import VaporizeTextCycle, { Tag } from "../components/ui/vapour-text-effect";
 import {
   type RevampStage,
   type ParseResult,
@@ -31,6 +45,83 @@ import {
 } from "../lib/resumeRevampTypes";
 
 const STORAGE_KEY = "mentorque-revamp-data";
+
+type RevealSlide = {
+  title: string;
+  items: { Icon: LucideIcon; text: string }[];
+};
+
+/** Each vapor headline + three benefits with icons (synced by index with `VaporizeTextCycle`). */
+const REVEAL_SLIDES: RevealSlide[] = [
+  {
+    title: "2,000+ interviews landed",
+    items: [
+      {
+        Icon: Sparkles,
+        text: "Role-aligned resume and story that pass recruiter screens",
+      },
+      {
+        Icon: Mic2,
+        text: "Talking points and proof for every common interview question",
+      },
+      {
+        Icon: RefreshCw,
+        text: "A repeatable system so every application feels less random",
+      },
+    ],
+  },
+  {
+    title: "Personalised outreach",
+    items: [
+      {
+        Icon: Send,
+        text: "First lines written for the role, company, and hiring manager",
+      },
+      {
+        Icon: Inbox,
+        text: "Fewer generic blasts — more replies that lead to conversations",
+      },
+      {
+        Icon: LayoutTemplate,
+        text: "Templates you can tweak in minutes, not hours",
+      },
+    ],
+  },
+  {
+    title: "Job posting insights",
+    items: [
+      {
+        Icon: Radar,
+        text: "Instant read on must-have skills vs nice-to-have in each JD",
+      },
+      {
+        Icon: Lightbulb,
+        text: "Bullet ideas pulled from the posting so you sound like the hire",
+      },
+      {
+        Icon: Target,
+        text: "Faster “should I apply?” decisions with less second-guessing",
+      },
+    ],
+  },
+  {
+    title: "Mentor-backed tracking",
+    items: [
+      {
+        Icon: ClipboardList,
+        text: "One place to see every application and follow-up",
+      },
+      {
+        Icon: MessageSquare,
+        text: "Feedback loops so you adjust strategy week to week",
+      },
+      {
+        Icon: ShieldCheck,
+        text: "Accountability that keeps momentum after the revamp ships",
+      },
+    ],
+  },
+];
 
 interface ResumeRevampStepProps {
   /** Called when the user clicks "Continue" after the comparison, or skips */
@@ -51,70 +142,6 @@ interface ResumeRevampStepProps {
   skipEarlierRevampStages?: boolean;
 }
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
-function getStages(skipUpload: boolean): { key: RevampStage; label: string }[] {
-  if (skipUpload) {
-    return [
-      { key: "questions", label: "Profile" },
-      { key: "comparison", label: "Review" },
-    ];
-  }
-  return [
-    { key: "upload", label: "Upload" },
-    { key: "questions", label: "Profile" },
-    { key: "comparison", label: "Review" },
-  ];
-}
-
-function StageIndicator({
-  current,
-  skipUpload,
-}: {
-  current: RevampStage;
-  skipUpload: boolean;
-}) {
-  const STAGES = getStages(skipUpload);
-  const activeIndex = STAGES.findIndex((s) => s.key === current);
-  return (
-    <div className="flex justify-center mb-12">
-      <div className="stepper-bar">
-        {STAGES.map((s, i) => {
-          const isDone = i < activeIndex;
-          const isActive = i === activeIndex;
-          return (
-            <div key={s.key} className="flex items-center">
-              {i > 0 && <div className="stepper-divider" />}
-              <div
-                className={cn("stepper-step", {
-                  active: isActive,
-                  done: isDone && !isActive,
-                })}
-              >
-                <span className="stepper-num">
-                  {isDone && !isActive ? (
-                    <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none">
-                      <path
-                        d="M2 6l3 3 5-5"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : (
-                    i + 1
-                  )}
-                </span>
-                <span>{s.label}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ResumeRevampStep({
@@ -127,6 +154,20 @@ export function ResumeRevampStep({
   onRevealPathChange,
   skipEarlierRevampStages = false,
 }: ResumeRevampStepProps) {
+  /** Direct navigation to `/resume-revamp-reveal` should show the waiting UI (same as DB-locked reveal-only). */
+  const [enteredViaRevealUrl] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.location.pathname === "/resume-revamp-reveal",
+  );
+  const revealOnlyFlow = skipEarlierRevampStages || enteredViaRevealUrl;
+
+  const revealTitles = useMemo(
+    () => REVEAL_SLIDES.map((s) => s.title),
+    [],
+  );
+  const [revealSlideIndex, setRevealSlideIndex] = useState(0);
+
   const fetchRevealResumeAllowed = useCallback(async (): Promise<boolean> => {
     if (!authToken?.trim()) {
       return true;
@@ -157,11 +198,17 @@ export function ResumeRevampStep({
 
   const [bootstrapFromRaw, setBootstrapFromRaw] = useState(
     () =>
-      !skipEarlierRevampStages && hasRawFromOnboarding && !hasPrefilledParse,
+      !revealOnlyFlow && hasRawFromOnboarding && !hasPrefilledParse,
   );
 
   const [stage, setStage] = useState<RevampStage>(() => {
     if (skipEarlierRevampStages) return "awaitReveal";
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname === "/resume-revamp-reveal"
+    ) {
+      return "awaitReveal";
+    }
     if (typeof window === "undefined") return skipUpload ? "questions" : "upload";
     const hash = window.location.hash;
     // Only restore state if there's an explicit hash (meaning user refreshed)
@@ -207,7 +254,7 @@ export function ResumeRevampStep({
 
   // Run AI parse once when onboarding collected raw text (upload step does not parse).
   useEffect(() => {
-    if (skipEarlierRevampStages) return;
+    if (revealOnlyFlow) return;
     if (hasPrefilledParse || !hasRawFromOnboarding || parseFromRawFailed) return;
 
     let cancelled = false;
@@ -274,7 +321,7 @@ export function ResumeRevampStep({
     hasPrefilledParse,
     hasRawFromOnboarding,
     initialRawResumeText,
-    skipEarlierRevampStages,
+    revealOnlyFlow,
   ]);
 
   // Persist to sessionStorage when stage changes
@@ -310,9 +357,9 @@ export function ResumeRevampStep({
   // Poll until admin sets `revealResume` on the onboarding submission
   useEffect(() => {
     if (stage !== "awaitReveal") return;
-    if (!skipEarlierRevampStages && (!parseResult || !revampResult)) return;
+    if (!revealOnlyFlow && (!parseResult || !revampResult)) return;
     if (!authToken?.trim()) {
-      if (!skipEarlierRevampStages) setStage("comparison");
+      if (!revealOnlyFlow) setStage("comparison");
       return;
     }
     let cancelled = false;
@@ -334,7 +381,7 @@ export function ResumeRevampStep({
     onboardingSubmissionId,
     authToken,
     fetchRevealResumeAllowed,
-    skipEarlierRevampStages,
+    revealOnlyFlow,
   ]);
 
   // `/resume-revamp-reveal` while generating or waiting for mentor reveal; `/resume-revamp` otherwise.
@@ -378,10 +425,8 @@ export function ResumeRevampStep({
     setStage(allowed ? "comparison" : "awaitReveal");
   };
 
-  // ── Stage 3 → done: user finalises ────────────────────────────────────────
-
   if (
-    !skipEarlierRevampStages &&
+    !revealOnlyFlow &&
     bootstrapFromRaw &&
     hasRawFromOnboarding &&
     !hasPrefilledParse
@@ -454,22 +499,6 @@ export function ResumeRevampStep({
           </div>
         </div>
       )}
-      {/* Stage indicator — hidden on reveal route (loading / await mentor) and on comparison */}
-      <AnimatePresence>
-        {!revampFlowBusy &&
-          stage !== "comparison" &&
-          stage !== "awaitReveal" && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-            <StageIndicator current={stage} skipUpload={skipUpload} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <AnimatePresence mode="wait">
         {!skipUpload && stage === "upload" && (
           <motion.div
@@ -502,42 +531,70 @@ export function ResumeRevampStep({
           </motion.div>
         )}
 
-        {stage === "awaitReveal" &&
-          (skipEarlierRevampStages || (parseResult && revampResult)) && (
+        {stage === "awaitReveal" && (
           <motion.div
             key="awaitReveal"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35, ease: "easeOut" }}
-            className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-4 py-16 text-center"
+            className="flex w-full flex-1 flex-col items-center justify-start gap-4 px-4 pt-2 pb-8 text-center"
           >
-            <MentorqueLoader size={140} />
-            <div className="max-w-md space-y-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/45">
-                resume-revamp-reveal
-              </p>
-              <h2 className="text-2xl font-serif font-light tracking-tight text-foreground">
-                Your resume is almost ready
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {skipEarlierRevampStages && (!parseResult || !revampResult)
-                  ? "Your onboarding details are saved. Your mentor will unlock your full review here when it is ready. This page updates automatically."
-                  : "We have saved your answers and generated your upgraded profile. Your detailed review will unlock here once your mentor marks your resume as ready to share. This page updates automatically — you can keep it open."}
-              </p>
+            <MentorqueLoader size={64} />
+            <div className="w-full max-w-4xl min-h-[3.25rem] overflow-x-auto sm:min-h-[4.25rem]">
+              <VaporizeTextCycle
+                texts={revealTitles}
+                onTextIndexChange={setRevealSlideIndex}
+                font={{
+                  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+                  fontSize: "44px",
+                  fontWeight: 600,
+                }}
+                color="rgb(255, 255, 255)"
+                spread={5}
+                density={5}
+                animation={{
+                  vaporizeDuration: 2,
+                  fadeInDuration: 1,
+                  waitDuration: 6,
+                }}
+                direction="left-to-right"
+                alignment="center"
+                tag={Tag.H2}
+              />
             </div>
-            <div className="max-w-4xl space-y-4 text-center">
-              <h3 className="text-lg font-medium text-white/90">
-                You are given a task to integrate an existing React component in the
-                codebase
-              </h3>
-              <p className="text-xs leading-relaxed text-white/60">
-                The codebase should support shadcn project structure, Tailwind CSS,
-                and Typescript. If it does not, setup should be done via shadcn CLI.
-                Components path defaults to /components/ui and should stay there.
-              </p>
-            </div>
-            <RevealRotatingCards />
+            <AnimatePresence mode="wait">
+              <motion.ul
+                key={revealSlideIndex}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="mx-auto w-full max-w-lg space-y-3 text-left md:max-w-xl"
+              >
+                {REVEAL_SLIDES[revealSlideIndex]?.items.map(({ Icon, text }, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3.5 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3.5 shadow-sm backdrop-blur-md md:gap-4 md:px-5 md:py-4"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] md:h-11 md:w-11">
+                      <Icon
+                        className="h-5 w-5 text-emerald-300/95 md:h-6 md:w-6"
+                        strokeWidth={1.75}
+                        aria-hidden
+                      />
+                    </span>
+                    <span className="pt-0.5 text-[15px] font-medium leading-relaxed tracking-tight text-white/92 md:text-base">
+                      {text}
+                    </span>
+                  </li>
+                ))}
+              </motion.ul>
+            </AnimatePresence>
+            <p className="max-w-sm text-[11px] leading-snug text-muted-foreground/90 md:text-xs">
+              Your mentor unlocks your full review here when it&apos;s ready. This
+              page updates automatically.
+            </p>
           </motion.div>
         )}
 

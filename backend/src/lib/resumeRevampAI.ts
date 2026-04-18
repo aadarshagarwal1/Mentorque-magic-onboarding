@@ -34,6 +34,17 @@ export interface RevampQuestion {
 
 export type ChangeSection = 'experience' | 'projects' | 'summary' | 'skills';
 
+/** The type of writing improvement applied to the bullet */
+export type ChangeCategory =
+  | 'Quantification'
+  | 'Action Verb'
+  | 'Impact Clarity'
+  | 'XYZ Formula'
+  | 'Brevity'
+  | 'Tense Fix'
+  | 'Pronoun Removal'
+  | 'ATS Optimization';
+
 export interface BulletChange {
   /** Stable ID for React keying and accept/reject tracking */
   id: string;
@@ -44,7 +55,30 @@ export interface BulletChange {
   bulletIndex?: number;
   original: string;
   revised: string;
+
+  // ─── Rich justification fields ───────────────────────────────────────────────
+
+  /** One-sentence explanation of what was improved and why */
   reason: string;
+  /** Primary category of improvement — drives the UI badge colour */
+  category: ChangeCategory;
+  /**
+   * Which of the 10 Mentorque guidelines was the primary driver.
+   * Format: "Rule N — <short rule name>"
+   * e.g. "Rule 2 — Quantify ALL achievements"
+   */
+  guidelineRef: string;
+  /**
+   * If a specific metric was introduced or made more precise, quote it here.
+   * Include its source in parentheses: "(from candidate answer)" or "(inferred from role)".
+   * Omit the field entirely if no metric was added/changed.
+   */
+  metricHighlight?: string;
+  /**
+   * 1-2 sentences from a hiring-manager perspective explaining why this
+   * category of change matters during resume screening.
+   */
+  coachTip: string;
 }
 
 export interface RevampResult {
@@ -144,19 +178,30 @@ export async function revampResume(
 
   const prompt = `You are an expert resume writer for Mentorque, a professional mentorship platform.
 
-Revamp the following resume following Mentorque's strict resume guidelines, then output the full revamped resume AND a detailed list of every bullet-level change.
+Revamp the following resume following Mentorque's strict resume guidelines, then output the full revamped resume AND a detailed list of every bullet-level change with rich justification metadata.
 
 ━━━ MENTORQUE RESUME GUIDELINES ━━━
-1. Every bullet must open with a strong past-tense action verb (Developed, Led, Reduced, Built, Delivered, etc.)
-2. Quantify ALL achievements — add specific numbers, percentages, scale, team size, revenue impact where inferable or stated in candidate's answers
-3. Use the XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]"
-4. Strip filler openers: "responsible for", "helped with", "worked on", "assisted in", "participated in"
-5. Show impact, not just activity — every bullet must answer "so what?"
-6. Professional summary: 2-3 sentences, role-targeted, leading with top 3 value propositions, no personal pronouns
-7. Skills: ATS-optimized, industry-standard terminology
-8. No personal pronouns anywhere (I, my, we, our)
-9. Present tense for current role, past tense for all previous
-10. Each bullet 1-2 lines — trim padding, no redundancy
+Rule 1:  Every bullet must open with a strong past-tense action verb (Developed, Led, Reduced, Built, Delivered, etc.)
+Rule 2:  Quantify ALL achievements — add specific numbers, percentages, scale, team size, revenue impact where inferable or stated in candidate's answers
+Rule 3:  Use the XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]"
+Rule 4:  Strip filler openers: "responsible for", "helped with", "worked on", "assisted in", "participated in"
+Rule 5:  Show impact, not just activity — every bullet must answer "so what?"
+Rule 6:  Professional summary: 2-3 sentences, role-targeted, leading with top 3 value propositions, no personal pronouns
+Rule 7:  Skills: ATS-optimized, industry-standard terminology
+Rule 8:  No personal pronouns anywhere (I, my, we, our)
+Rule 9:  Present tense for current role, past tense for all previous
+Rule 10: Each bullet 1-2 lines — trim padding, no redundancy
+
+━━━ CHANGE CATEGORY TAXONOMY ━━━
+Every change must be classified as exactly one of these categories:
+- "Quantification"   → a metric, number, %, $, scale, or team size was added or made more precise
+- "Action Verb"      → the opening verb was replaced with a stronger, more specific one
+- "Impact Clarity"   → the "so what?" was added — outcome or business impact made explicit
+- "XYZ Formula"      → restructured to accomplished [X] measured by [Y] by doing [Z]
+- "Brevity"          → filler phrases removed, bullet made tighter without losing meaning
+- "Tense Fix"        → verb tense corrected (past for old roles, present for current)
+- "Pronoun Removal"  → personal pronouns (I, my, we, our) removed
+- "ATS Optimization" → skill or keyword rewritten to industry-standard ATS terminology
 
 ━━━ ADDITIONAL CONTEXT FROM CANDIDATE ━━━
 ${answersText}
@@ -177,20 +222,32 @@ Return a single JSON object with exactly this structure (no markdown):
       "bulletIndex": 0,
       "original": "Original bullet text",
       "revised": "Revamped bullet text",
-      "reason": "Added quantification and stronger action verb"
+      "reason": "One clear sentence: what specifically was changed and what problem it fixes",
+      "category": "Quantification",
+      "guidelineRef": "Rule 2 — Quantify ALL achievements",
+      "metricHighlight": "Added: 40% reduction in load time (from candidate answer about performance work)",
+      "coachTip": "Hiring managers at top tech companies spend 6 seconds on a resume — numbers are the fastest signal of real impact."
     }
   ]
 }
 
-Rules for the changes array:
+━━━ RULES FOR THE CHANGES ARRAY ━━━
+Structural rules:
 - For experience bullets: section="experience", sectionIndex=index into experience[], bulletIndex=index into highlights[]
 - For project bullets: section="projects", sectionIndex=index into projects[], bulletIndex=index into highlights[]
 - For summary: section="summary", omit sectionIndex and bulletIndex, original=old summary, revised=new summary
 - For individual skills (if changed/added): section="skills", sectionIndex=index in skills[], omit bulletIndex
 - id format: "chg-{section}-{sectionIndex??0}-{bulletIndex??0}" — must be unique
 - Only include entries where the text was actually changed
-- reason should be 1 concise sentence explaining the improvement
-- Be thorough — every suboptimal bullet should be improved`;
+
+Justification rules (CRITICAL — these power the coaching UI):
+- reason: 1 sentence, be specific about WHAT was changed ("'responsible for' replaced with 'Engineered'") and WHY ("eliminates passive voice flagged by ATS parsers")
+- category: must be exactly one value from the taxonomy above — pick the PRIMARY improvement if multiple apply
+- guidelineRef: must be in format "Rule N — <exact rule name from the guidelines above>"
+- metricHighlight: ONLY include if a concrete number/% was introduced or made more precise. Quote the exact metric and note its source: "(from candidate answer)", "(inferred from role level)", or "(industry benchmark)". OMIT the field entirely if no metric change occurred.
+- coachTip: 1-2 sentences written as if a senior recruiter/hiring manager is speaking. Should explain WHY this category of change improves screening outcomes — not just restate what was done. Make it feel like insider knowledge.
+
+Be thorough — every suboptimal bullet should be improved. Quality over speed on the justifications.`;
 
   const response = await client.chat.completions.create({
     model: MODEL,
@@ -208,10 +265,13 @@ Rules for the changes array:
 
   const result = JSON.parse(content);
 
-  // Guarantee every change has a stable unique id
+  // Guarantee every change has a stable unique id and required fields
   const changes: BulletChange[] = (result.changes || []).map((c: any, i: number) => ({
     ...c,
     id: c.id || `chg-${i}`,
+    category: c.category || 'Impact Clarity',
+    guidelineRef: c.guidelineRef || 'Rule 5 — Show impact, not just activity',
+    coachTip: c.coachTip || 'Strong bullets combine a clear action, a measurable result, and context that shows scope.',
   }));
 
   return {

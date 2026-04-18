@@ -335,6 +335,14 @@ const FORM_SUBMITTED_KEY = "mentorque_onboarding_form_submitted";
 const INPUT_LOCKED_STORAGE_KEY = "mentorque_onboarding_inputs_complete";
 /** Raw resume text from upload/paste — mirrored so Experience / revamp never lose it on navigation. */
 const RESUME_TEXT_STORAGE_KEY = "mentorque_onboarding_resume_text";
+/** Current step persisted across refreshes */
+const CURRENT_STEP_STORAGE_KEY = "mentorque_onboarding_current_step";
+/** Basic details persisted across refreshes */
+const BASIC_DETAILS_STORAGE_KEY = "mentorque_onboarding_basic_details";
+/** Work experience persisted across refreshes */
+const WORK_EXPERIENCE_STORAGE_KEY = "mentorque_onboarding_work_experience";
+/** Job preferences persisted across refreshes */
+const JOB_PREFS_STORAGE_KEY = "mentorque_onboarding_job_prefs";
 
 /** Wider column, responsive; parent uses flex + justify-center to center each step */
 const STEP_OUTER =
@@ -758,14 +766,19 @@ export function OnboardingFlow() {
   const [step, setStepInternal] = useState<OnboardingStep>(() => {
     if (typeof window !== "undefined") {
       const path = window.location.pathname;
+      const storedStep = localStorage.getItem(CURRENT_STEP_STORAGE_KEY);
+      if (storedStep && STEPS.includes(storedStep as OnboardingStep)) {
+        return storedStep as OnboardingStep;
+      }
       if (path === "/resume-revamp" || path === "/resume-revamp-reveal")
         return "resumeRevamp";
       if (path === "/almost-ready") return "submitted";
       if (path === "/upload-resume") return "uploadResume";
+      if (path === "/work-experience") return "workExperience";
+      if (path === "/job-preferences") return "jobPreferences";
       if (path === "/onboarding-form") return "basics";
       if (path === "/get-started" || path === "/") return "login";
     }
-    // If URL hash is #result or #questions, jump to resumeRevamp step
     if (
       typeof window !== "undefined" &&
       (window.location.hash === "#result" ||
@@ -780,24 +793,71 @@ export function OnboardingFlow() {
   );
   const confettiRef = useRef<ConfettiRef>(null);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
-  const [linkedin, setLinkedin] = useState("");
+  const loadFromLocalStorage = <T,>(key: string, fallback: T): T => {
+    if (typeof window === "undefined") return fallback;
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return fallback;
+      try {
+        return JSON.parse(stored) as T;
+      } catch {
+        return stored as T;
+      }
+    } catch {
+      return fallback;
+    }
+  };
 
-  const [company, setCompany] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [yearsExp, setYearsExp] = useState("");
-  const [teamSize, setTeamSize] = useState("");
-  const [impact, setImpact] = useState("");
-  const [revenueImpact, setRevenueImpact] = useState("");
-  const [topStat, setTopStat] = useState("");
+  const [firstName, setFirstName] = useState(() =>
+    loadFromLocalStorage("basicDetails_firstName", ""),
+  );
+  const [lastName, setLastName] = useState(() =>
+    loadFromLocalStorage("basicDetails_lastName", ""),
+  );
+  const [phone, setPhone] = useState(() =>
+    loadFromLocalStorage("basicDetails_phone", ""),
+  );
+  const [location, setLocation] = useState(() =>
+    loadFromLocalStorage("basicDetails_location", ""),
+  );
+  const [linkedin, setLinkedin] = useState(() =>
+    loadFromLocalStorage("basicDetails_linkedin", ""),
+  );
 
-  const [targetRole, setTargetRole] = useState("");
-  const [country, setCountry] = useState("");
-  const [seniority, setSeniority] = useState("");
-  const [workStyle, setWorkStyle] = useState("");
+  const [company, setCompany] = useState(() =>
+    loadFromLocalStorage("workExp_company", ""),
+  );
+  const [jobTitle, setJobTitle] = useState(() =>
+    loadFromLocalStorage("workExp_jobTitle", ""),
+  );
+  const [yearsExp, setYearsExp] = useState(() =>
+    loadFromLocalStorage("workExp_yearsExp", ""),
+  );
+  const [teamSize, setTeamSize] = useState(() =>
+    loadFromLocalStorage("workExp_teamSize", ""),
+  );
+  const [impact, setImpact] = useState(() =>
+    loadFromLocalStorage("workExp_impact", ""),
+  );
+  const [revenueImpact, setRevenueImpact] = useState(() =>
+    loadFromLocalStorage("workExp_revenueImpact", ""),
+  );
+  const [topStat, setTopStat] = useState(() =>
+    loadFromLocalStorage("workExp_topStat", ""),
+  );
+
+  const [targetRole, setTargetRole] = useState(() =>
+    loadFromLocalStorage("jobPrefs_targetRole", ""),
+  );
+  const [country, setCountry] = useState(() =>
+    loadFromLocalStorage("jobPrefs_country", ""),
+  );
+  const [seniority, setSeniority] = useState(() =>
+    loadFromLocalStorage("jobPrefs_seniority", ""),
+  );
+  const [workStyle, setWorkStyle] = useState(() =>
+    loadFromLocalStorage("jobPrefs_workStyle", ""),
+  );
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -895,6 +955,90 @@ export function OnboardingFlow() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (firstName) localStorage.setItem("basicDetails_firstName", firstName);
+    else localStorage.removeItem("basicDetails_firstName");
+  }, [firstName]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (lastName) localStorage.setItem("basicDetails_lastName", lastName);
+    else localStorage.removeItem("basicDetails_lastName");
+  }, [lastName]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (phone) localStorage.setItem("basicDetails_phone", phone);
+    else localStorage.removeItem("basicDetails_phone");
+  }, [phone]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (location) localStorage.setItem("basicDetails_location", location);
+    else localStorage.removeItem("basicDetails_location");
+  }, [location]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (linkedin) localStorage.setItem("basicDetails_linkedin", linkedin);
+    else localStorage.removeItem("basicDetails_linkedin");
+  }, [linkedin]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (company) localStorage.setItem("workExp_company", company);
+    else localStorage.removeItem("workExp_company");
+  }, [company]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (jobTitle) localStorage.setItem("workExp_jobTitle", jobTitle);
+    else localStorage.removeItem("workExp_jobTitle");
+  }, [jobTitle]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (yearsExp) localStorage.setItem("workExp_yearsExp", yearsExp);
+    else localStorage.removeItem("workExp_yearsExp");
+  }, [yearsExp]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (teamSize) localStorage.setItem("workExp_teamSize", teamSize);
+    else localStorage.removeItem("workExp_teamSize");
+  }, [teamSize]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (impact) localStorage.setItem("workExp_impact", impact);
+    else localStorage.removeItem("workExp_impact");
+  }, [impact]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (revenueImpact)
+      localStorage.setItem("workExp_revenueImpact", revenueImpact);
+    else localStorage.removeItem("workExp_revenueImpact");
+  }, [revenueImpact]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (topStat) localStorage.setItem("workExp_topStat", topStat);
+    else localStorage.removeItem("workExp_topStat");
+  }, [topStat]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (targetRole) localStorage.setItem("jobPrefs_targetRole", targetRole);
+    else localStorage.removeItem("jobPrefs_targetRole");
+  }, [targetRole]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (country) localStorage.setItem("jobPrefs_country", country);
+    else localStorage.removeItem("jobPrefs_country");
+  }, [country]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (seniority) localStorage.setItem("jobPrefs_seniority", seniority);
+    else localStorage.removeItem("jobPrefs_seniority");
+  }, [seniority]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (workStyle) localStorage.setItem("jobPrefs_workStyle", workStyle);
+    else localStorage.removeItem("jobPrefs_workStyle");
+  }, [workStyle]);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
         clearAuth();
@@ -964,10 +1108,7 @@ export function OnboardingFlow() {
         if (formDone && entryPaths.includes(path)) {
           setStep("resumeRevamp");
           window.history.replaceState(null, "", "/resume-revamp");
-        } else if (
-          !formDone &&
-          (path === "/" || path === "/get-started")
-        ) {
+        } else if (!formDone && (path === "/" || path === "/get-started")) {
           setStep("basics");
           window.history.replaceState(null, "", "/onboarding-form");
         }
@@ -1015,9 +1156,44 @@ export function OnboardingFlow() {
       localStorage.removeItem(SUBMISSION_STORAGE_KEY);
       localStorage.removeItem(FORM_SUBMITTED_KEY);
       localStorage.removeItem(INPUT_LOCKED_STORAGE_KEY);
+      localStorage.removeItem(CURRENT_STEP_STORAGE_KEY);
+      [
+        "basicDetails_firstName",
+        "basicDetails_lastName",
+        "basicDetails_phone",
+        "basicDetails_location",
+        "basicDetails_linkedin",
+        "workExp_company",
+        "workExp_jobTitle",
+        "workExp_yearsExp",
+        "workExp_teamSize",
+        "workExp_impact",
+        "workExp_revenueImpact",
+        "workExp_topStat",
+        "jobPrefs_targetRole",
+        "jobPrefs_country",
+        "jobPrefs_seniority",
+        "jobPrefs_workStyle",
+      ].forEach((k) => localStorage.removeItem(k));
     }
     setInputsCompleteLocked(false);
     setReturningUserRevealOnly(false);
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setLocation("");
+    setLinkedin("");
+    setCompany("");
+    setJobTitle("");
+    setYearsExp("");
+    setTeamSize("");
+    setImpact("");
+    setRevenueImpact("");
+    setTopStat("");
+    setTargetRole("");
+    setCountry("");
+    setSeniority("");
+    setWorkStyle("");
     setStep("login");
   };
 
@@ -1028,7 +1204,11 @@ export function OnboardingFlow() {
 
   const handleContinueBasics = () => {
     if (!canProceedBasics) return;
-    setStep("uploadResume");
+    if (uploadedResumeText.trim()) {
+      setStep("workExperience");
+    } else {
+      setStep("uploadResume");
+    }
   };
 
   const handleResumeTextReady = useCallback(
@@ -1036,7 +1216,7 @@ export function OnboardingFlow() {
       commitResumeText(rawText);
       setStep("workExperience");
     },
-    [commitResumeText],
+    [commitResumeText, setStep],
   );
 
   const submitFormAndOpenRevamp = async () => {
@@ -1161,20 +1341,17 @@ export function OnboardingFlow() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    localStorage.setItem(CURRENT_STEP_STORAGE_KEY, step);
+
     if (step === "resumeRevamp") {
-      // ResumeRevampStep sets `/resume-revamp` vs `/resume-revamp-reveal` — do not overwrite.
       return;
     }
     let targetPath = "/get-started";
     if (step === "submitted") targetPath = "/almost-ready";
     else if (step === "uploadResume") targetPath = "/upload-resume";
-    else if (
-      step === "basics" ||
-      step === "workExperience" ||
-      step === "jobPreferences"
-    ) {
-      targetPath = "/onboarding-form";
-    }
+    else if (step === "workExperience") targetPath = "/work-experience";
+    else if (step === "jobPreferences") targetPath = "/job-preferences";
+    else if (step === "basics") targetPath = "/onboarding-form";
     if (window.location.pathname !== targetPath) {
       window.history.replaceState(null, "", targetPath);
     }
@@ -1187,7 +1364,9 @@ export function OnboardingFlow() {
       if (id && token) {
         try {
           await fetch(
-            withApiBase(`/api/onboarding/submissions/${encodeURIComponent(id)}`),
+            withApiBase(
+              `/api/onboarding/submissions/${encodeURIComponent(id)}`,
+            ),
             {
               method: "PATCH",
               headers: {
@@ -1303,55 +1482,65 @@ export function OnboardingFlow() {
         <AnimatePresence>
           {step !== "login" &&
             !(step === "resumeRevamp" && resumeRevampRevealRoute) && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
-            className="stepper-bar"
-          >
-            {STEPPER_STEPS.map((s, i) => {
-              const stepIdx = STEPS.indexOf(s.id);
-              const isActive =
-                step === s.id ||
-                (step === "submitted" && s.id === "resumeRevamp");
-              const isDone = currentStepIndex > stepIdx;
-              return (
-                <React.Fragment key={s.id}>
-                  {i > 0 && <div className="stepper-divider" />}
-                  <button
-                    type="button"
-                    onClick={() => setStep(s.id)}
-                    className={cn("stepper-step", {
-                      active: isActive,
-                      done: isDone && !isActive,
-                    })}
-                  >
-                    <span className="stepper-num">
-                      {isDone && !isActive ? (
-                        <svg
-                          viewBox="0 0 12 12"
-                          className="w-3 h-3"
-                          fill="none"
-                        >
-                          <path
-                            d="M2 6l3 3 5-5"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      ) : (
-                        i + 1
-                      )}
-                    </span>
-                    <span>{s.label}</span>
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </motion.div>
-          )}
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
+                className="stepper-bar"
+              >
+                {STEPPER_STEPS.map((s, i) => {
+                  const stepIdx = STEPS.indexOf(s.id);
+                  const isActive =
+                    step === s.id ||
+                    (step === "submitted" && s.id === "resumeRevamp");
+                  const isDone = currentStepIndex > stepIdx;
+                  return (
+                    <React.Fragment key={s.id}>
+                      {i > 0 && <div className="stepper-divider" />}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetStep = s.id;
+                          if (
+                            targetStep === "uploadResume" &&
+                            uploadedResumeText.trim()
+                          ) {
+                            setStep("workExperience");
+                          } else {
+                            setStep(targetStep);
+                          }
+                        }}
+                        className={cn("stepper-step", {
+                          active: isActive,
+                          done: isDone && !isActive,
+                        })}
+                      >
+                        <span className="stepper-num">
+                          {isDone && !isActive ? (
+                            <svg
+                              viewBox="0 0 12 12"
+                              className="w-3 h-3"
+                              fill="none"
+                            >
+                              <path
+                                d="M2 6l3 3 5-5"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : (
+                            i + 1
+                          )}
+                        </span>
+                        <span>{s.label}</span>
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              </motion.div>
+            )}
         </AnimatePresence>
       </div>
 
@@ -1368,7 +1557,7 @@ export function OnboardingFlow() {
           <GradientBackground />
         </div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {/* ... (keep other steps) */}
           {step === "login" && (
             <motion.div
@@ -1475,76 +1664,74 @@ export function OnboardingFlow() {
 
               <div className="w-full rounded-[2rem] border border-blue-400/20 bg-blue-950/20 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] p-6 sm:p-8 job-pref-card">
                 <div className="w-full space-y-8">
-                <BlurFade inView={false} delay={0.15} className="w-full">
-                  <div className="flex gap-3">
-                    <GlassInput
-                      icon={<User className="h-5 w-5 text-foreground/80" />}
-                      placeholder="First name"
-                      value={firstName}
-                      onChange={setFirstName}
-                      label="First name"
-                      showLabel={firstName.length > 0}
-                    />
-                    <GlassInput
-                      placeholder="Last name"
-                      value={lastName}
-                      onChange={setLastName}
-                      label="Last name"
-                      showLabel={lastName.length > 0}
-                    />
-                  </div>
-                </BlurFade>
+                  <BlurFade inView={false} delay={0.15} className="w-full">
+                    <div className="flex gap-3">
+                      <GlassInput
+                        icon={<User className="h-5 w-5 text-foreground/80" />}
+                        placeholder="First name"
+                        value={firstName}
+                        onChange={setFirstName}
+                        label="First name"
+                        showLabel={firstName.length > 0}
+                      />
+                      <GlassInput
+                        placeholder="Last name"
+                        value={lastName}
+                        onChange={setLastName}
+                        label="Last name"
+                        showLabel={lastName.length > 0}
+                      />
+                    </div>
+                  </BlurFade>
 
-                <BlurFade inView={false} delay={0.2} className="w-full">
-                  <GlassInput
-                    icon={<MapPin className="h-5 w-5 text-foreground/80" />}
-                    placeholder="City, Country"
-                    value={location}
-                    onChange={setLocation}
-                    label="Location"
-                    showLabel={location.length > 0}
-                  />
-                </BlurFade>
+                  <BlurFade inView={false} delay={0.2} className="w-full">
+                    <GlassInput
+                      icon={<MapPin className="h-5 w-5 text-foreground/80" />}
+                      placeholder="City, Country"
+                      value={location}
+                      onChange={setLocation}
+                      label="Location"
+                      showLabel={location.length > 0}
+                    />
+                  </BlurFade>
 
-                <BlurFade inView={false} delay={0.25} className="w-full">
-                  <GlassInput
-                    icon={
-                      <svg
-                        className="h-5 w-5 text-foreground/80"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
+                  <BlurFade inView={false} delay={0.25} className="w-full">
+                    <GlassInput
+                      icon={
+                        <svg
+                          className="h-5 w-5 text-foreground/80"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                        </svg>
+                      }
+                      placeholder="LinkedIn profile URL"
+                      value={linkedin}
+                      onChange={setLinkedin}
+                      label="LinkedIn"
+                      showLabel={linkedin.length > 0}
+                    />
+                  </BlurFade>
+
+                  <BlurFade inView={false} delay={0.3} className="w-full">
+                    <div className="flex justify-end">
+                      <GlassButton
+                        type="button"
+                        onClick={() => void handleContinueBasics()}
+                        disabled={!canProceedBasics}
+                        contentClassName="flex items-center gap-2"
+                        className={cn(
+                          "transition-opacity",
+                          !canProceedBasics && "opacity-40",
+                        )}
                       >
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                      </svg>
-                    }
-                    placeholder="LinkedIn profile URL"
-                    value={linkedin}
-                    onChange={setLinkedin}
-                    label="LinkedIn"
-                    showLabel={linkedin.length > 0}
-                  />
-                </BlurFade>
-
-                <BlurFade inView={false} delay={0.3} className="w-full">
-                  <div className="flex justify-end">
-                    <GlassButton
-                      type="button"
-                      onClick={() => void handleContinueBasics()}
-                      disabled={!canProceedBasics}
-                      contentClassName="flex items-center gap-2"
-                      className={cn(
-                        "transition-opacity",
-                        !canProceedBasics && "opacity-40",
-                      )}
-                    >
-                      Continue <ArrowRight className="w-4 h-4" />
-                    </GlassButton>
-                  </div>
-                </BlurFade>
+                        Continue <ArrowRight className="w-4 h-4" />
+                      </GlassButton>
+                    </div>
+                  </BlurFade>
                 </div>
               </div>
-
-
             </motion.div>
           )}
 
@@ -1573,7 +1760,6 @@ export function OnboardingFlow() {
                 onReady={handleResumeTextReady}
                 apiBaseUrl={API_BASE_URL}
               />
-            
             </motion.div>
           )}
 
@@ -1597,164 +1783,191 @@ export function OnboardingFlow() {
                 </BlurFade>
                 <BlurFade inView={false} delay={0.1}>
                   <p className="text-sm font-medium text-muted-foreground text-center max-w-lg mx-auto">
-                    Add your current role and impact below. Your uploaded resume text is kept
-                    in memory and shown here for reference.
+                    Add your current role and impact below. Your uploaded resume
+                    text is kept in memory and shown here for reference.
                   </p>
                 </BlurFade>
               </div>
 
               <div className="w-full rounded-[2rem] border border-blue-400/20 bg-blue-950/20 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] p-6 sm:p-8 job-pref-card">
                 <div className="w-full space-y-8">
-                {uploadedResumeText.trim().length > 0 ? (
-                  <BlurFade inView={false} delay={0.08} className="w-full">
-                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/25 p-4 space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300/95">
-                        Stored resume text ({uploadedResumeText.length.toLocaleString()}{" "}
-                        characters)
+                  {uploadedResumeText.trim().length > 0 ? (
+                    <BlurFade inView={false} delay={0.08} className="w-full">
+                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/25 p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300/95">
+                            Stored resume text (
+                            {uploadedResumeText.length.toLocaleString()}{" "}
+                            characters)
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              commitResumeText("");
+                              setStep("uploadResume");
+                            }}
+                            className="text-xs font-semibold text-red-400/80 hover:text-red-400 transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        <div className="max-h-56 overflow-y-auto rounded-xl bg-black/30 px-3 py-2 text-left">
+                          <pre className="text-[11px] leading-relaxed text-foreground/85 whitespace-pre-wrap font-mono">
+                            {uploadedResumeText}
+                          </pre>
+                        </div>
+                      </div>
+                    </BlurFade>
+                  ) : (
+                    <BlurFade inView={false} delay={0.08} className="w-full">
+                      <p className="text-xs text-center text-amber-400/90 rounded-xl border border-amber-500/25 bg-amber-950/20 px-4 py-3">
+                        No resume text in state yet — go back to Upload resume
+                        or paste text there first.
                       </p>
-                      <div className="max-h-56 overflow-y-auto rounded-xl bg-black/30 px-3 py-2 text-left">
-                        <pre className="text-[11px] leading-relaxed text-foreground/85 whitespace-pre-wrap font-mono">
-                          {uploadedResumeText}
-                        </pre>
+                    </BlurFade>
+                  )}
+                  <BlurFade inView={false} delay={0.12} className="w-full">
+                    <GlassInput
+                      icon={
+                        <Building2 className="h-5 w-5 text-foreground/80" />
+                      }
+                      placeholder="Current / most recent company"
+                      value={company}
+                      onChange={setCompany}
+                      label="Company"
+                      showLabel={company.length > 0}
+                    />
+                  </BlurFade>
+
+                  <BlurFade inView={false} delay={0.16} className="w-full">
+                    <GlassInput
+                      icon={
+                        <Briefcase className="h-5 w-5 text-foreground/80" />
+                      }
+                      placeholder="Your job title"
+                      value={jobTitle}
+                      onChange={setJobTitle}
+                      label="Job title"
+                      showLabel={jobTitle.length > 0}
+                    />
+                  </BlurFade>
+
+                  <BlurFade inView={false} delay={0.2} className="w-full">
+                    <div className="flex gap-3">
+                      <GlassSelect
+                        icon={
+                          <TrendingUp className="h-5 w-5 text-foreground/80" />
+                        }
+                        placeholder="Years of exp."
+                        value={yearsExp}
+                        onChange={setYearsExp}
+                        options={[
+                          { value: "0-1", label: "0–1 years" },
+                          { value: "1-3", label: "1–3 years" },
+                          { value: "3-5", label: "3–5 years" },
+                          { value: "5-8", label: "5–8 years" },
+                          { value: "8-12", label: "8–12 years" },
+                          { value: "12+", label: "12+ years" },
+                        ]}
+                        label="Experience"
+                      />
+                      <GlassSelect
+                        icon={<Users className="h-5 w-5 text-foreground/80" />}
+                        placeholder="Team size"
+                        value={teamSize}
+                        onChange={setTeamSize}
+                        options={[
+                          { value: "1", label: "Solo" },
+                          { value: "2-5", label: "2–5" },
+                          { value: "6-10", label: "6–10" },
+                          { value: "11-25", label: "11–25" },
+                          { value: "26-50", label: "26–50" },
+                          { value: "50+", label: "50+" },
+                        ]}
+                        label="Team size"
+                      />
+                    </div>
+                  </BlurFade>
+
+                  <BlurFade inView={false} delay={0.24} className="w-full">
+                    <div className="relative w-full">
+                      {impact.length > 0 && (
+                        <label className="absolute -top-6 left-4 z-10 text-xs text-muted-foreground font-semibold">
+                          Key impact (e.g. "Reduced churn by 30%")
+                        </label>
+                      )}
+                      <div className="glass-textarea-wrap w-full">
+                        <div className="glass-textarea">
+                          <div className="relative z-10 flex-shrink-0 flex items-start justify-center w-10 pl-2 pt-3">
+                            <Target className="h-5 w-5 text-foreground/80" />
+                          </div>
+                          <textarea
+                            placeholder='Key impact — e.g. "Led migration that cut latency by 40%"'
+                            value={impact}
+                            onChange={(e) => setImpact(e.target.value)}
+                            rows={3}
+                            className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+                          />
+                        </div>
                       </div>
                     </div>
                   </BlurFade>
-                ) : (
-                  <BlurFade inView={false} delay={0.08} className="w-full">
-                    <p className="text-xs text-center text-amber-400/90 rounded-xl border border-amber-500/25 bg-amber-950/20 px-4 py-3">
-                      No resume text in state yet — go back to Upload resume or paste text
-                      there first.
-                    </p>
-                  </BlurFade>
-                )}
-                <BlurFade inView={false} delay={0.12} className="w-full">
-                  <GlassInput
-                    icon={<Building2 className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Current / most recent company"
-                    value={company}
-                    onChange={setCompany}
-                    label="Company"
-                    showLabel={company.length > 0}
-                  />
-                </BlurFade>
 
-                <BlurFade inView={false} delay={0.16} className="w-full">
-                  <GlassInput
-                    icon={<Briefcase className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Your job title"
-                    value={jobTitle}
-                    onChange={setJobTitle}
-                    label="Job title"
-                    showLabel={jobTitle.length > 0}
-                  />
-                </BlurFade>
-
-                <BlurFade inView={false} delay={0.2} className="w-full">
-                  <div className="flex gap-3">
-                    <GlassSelect
+                  <BlurFade inView={false} delay={0.28} className="w-full">
+                    <GlassInput
                       icon={
                         <TrendingUp className="h-5 w-5 text-foreground/80" />
                       }
-                      placeholder="Years of exp."
-                      value={yearsExp}
-                      onChange={setYearsExp}
-                      options={[
-                        { value: "0-1", label: "0–1 years" },
-                        { value: "1-3", label: "1–3 years" },
-                        { value: "3-5", label: "3–5 years" },
-                        { value: "5-8", label: "5–8 years" },
-                        { value: "8-12", label: "8–12 years" },
-                        { value: "12+", label: "12+ years" },
-                      ]}
-                      label="Experience"
+                      placeholder="Revenue / cost impact (e.g. $2M ARR)"
+                      value={revenueImpact}
+                      onChange={setRevenueImpact}
+                      label="Revenue / cost impact"
+                      showLabel={revenueImpact.length > 0}
                     />
-                    <GlassSelect
-                      icon={<Users className="h-5 w-5 text-foreground/80" />}
-                      placeholder="Team size"
-                      value={teamSize}
-                      onChange={setTeamSize}
-                      options={[
-                        { value: "1", label: "Solo" },
-                        { value: "2-5", label: "2–5" },
-                        { value: "6-10", label: "6–10" },
-                        { value: "11-25", label: "11–25" },
-                        { value: "26-50", label: "26–50" },
-                        { value: "50+", label: "50+" },
-                      ]}
-                      label="Team size"
-                    />
-                  </div>
-                </BlurFade>
+                  </BlurFade>
 
-                <BlurFade inView={false} delay={0.24} className="w-full">
-                  <div className="relative w-full">
-                    {impact.length > 0 && (
-                      <label className="absolute -top-6 left-4 z-10 text-xs text-muted-foreground font-semibold">
-                        Key impact (e.g. "Reduced churn by 30%")
-                      </label>
-                    )}
-                    <div className="glass-textarea-wrap w-full">
-                      <div className="glass-textarea">
-                        <div className="relative z-10 flex-shrink-0 flex items-start justify-center w-10 pl-2 pt-3">
-                          <Target className="h-5 w-5 text-foreground/80" />
-                        </div>
-                        <textarea
-                          placeholder='Key impact — e.g. "Led migration that cut latency by 40%"'
-                          value={impact}
-                          onChange={(e) => setImpact(e.target.value)}
-                          rows={3}
-                          className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
-                        />
-                      </div>
+                  <BlurFade inView={false} delay={0.32} className="w-full">
+                    <GlassInput
+                      icon={
+                        <TrendingUp className="h-5 w-5 text-foreground/80" />
+                      }
+                      placeholder="Your proudest metric (e.g. 99.9% uptime)"
+                      value={topStat}
+                      onChange={setTopStat}
+                      label="Top achievement stat"
+                      showLabel={topStat.length > 0}
+                    />
+                  </BlurFade>
+
+                  <BlurFade inView={false} delay={0.36} className="w-full">
+                    <div className="flex justify-between items-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (uploadedResumeText.trim()) {
+                            setStep("workExperience");
+                          } else {
+                            setStep("uploadResume");
+                          }
+                        }}
+                        className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4" /> Go back
+                      </button>
+                      <GlassButton
+                        type="button"
+                        onClick={() => setStep("jobPreferences")}
+                        disabled={!canProceedWork}
+                        contentClassName="flex items-center gap-2"
+                        className={cn(
+                          "transition-opacity",
+                          !canProceedWork && "opacity-40",
+                        )}
+                      >
+                        Continue <ArrowRight className="w-4 h-4" />
+                      </GlassButton>
                     </div>
-                  </div>
-                </BlurFade>
-
-                <BlurFade inView={false} delay={0.28} className="w-full">
-                  <GlassInput
-                    icon={<TrendingUp className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Revenue / cost impact (e.g. $2M ARR)"
-                    value={revenueImpact}
-                    onChange={setRevenueImpact}
-                    label="Revenue / cost impact"
-                    showLabel={revenueImpact.length > 0}
-                  />
-                </BlurFade>
-
-                <BlurFade inView={false} delay={0.32} className="w-full">
-                  <GlassInput
-                    icon={<TrendingUp className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Your proudest metric (e.g. 99.9% uptime)"
-                    value={topStat}
-                    onChange={setTopStat}
-                    label="Top achievement stat"
-                    showLabel={topStat.length > 0}
-                  />
-                </BlurFade>
-
-                <BlurFade inView={false} delay={0.36} className="w-full">
-                  <div className="flex justify-between items-center">
-                    <button
-                      type="button"
-                      onClick={() => setStep("uploadResume")}
-                      className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
-                    >
-                      <ArrowLeft className="w-4 h-4" /> Go back
-                    </button>
-                    <GlassButton
-                      type="button"
-                      onClick={() => setStep("jobPreferences")}
-                      disabled={!canProceedWork}
-                      contentClassName="flex items-center gap-2"
-                      className={cn(
-                        "transition-opacity",
-                        !canProceedWork && "opacity-40",
-                      )}
-                    >
-                      Continue <ArrowRight className="w-4 h-4" />
-                    </GlassButton>
-                  </div>
-                </BlurFade>
+                  </BlurFade>
                 </div>
               </div>
             </motion.div>
@@ -1787,115 +2000,118 @@ export function OnboardingFlow() {
 
               <div className="w-full rounded-[2rem] border border-blue-400/20 bg-blue-950/20 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] p-6 sm:p-8 job-pref-card">
                 <div className="w-full space-y-8">
-                <BlurFade inView={false} delay={0.15} className="w-full">
-                  <GlassInput
-                    icon={<Target className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Target role (e.g. Staff Engineer)"
-                    value={targetRole}
-                    onChange={setTargetRole}
-                    label="Target role"
-                    showLabel={targetRole.length > 0}
-                  />
-                </BlurFade>
+                  <BlurFade inView={false} delay={0.15} className="w-full">
+                    <GlassInput
+                      icon={<Target className="h-5 w-5 text-foreground/80" />}
+                      placeholder="Target role (e.g. Staff Engineer)"
+                      value={targetRole}
+                      onChange={setTargetRole}
+                      label="Target role"
+                      showLabel={targetRole.length > 0}
+                    />
+                  </BlurFade>
 
-                <BlurFade inView={false} delay={0.2} className="w-full">
-                  <GlassInput
-                    icon={<Globe className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Target country (e.g. United States)"
-                    value={country}
-                    onChange={setCountry}
-                    label="Target country"
-                    showLabel={country.length > 0}
-                  />
-                </BlurFade>
+                  <BlurFade inView={false} delay={0.2} className="w-full">
+                    <GlassInput
+                      icon={<Globe className="h-5 w-5 text-foreground/80" />}
+                      placeholder="Target country (e.g. United States)"
+                      value={country}
+                      onChange={setCountry}
+                      label="Target country"
+                      showLabel={country.length > 0}
+                    />
+                  </BlurFade>
 
-                <BlurFade inView={false} delay={0.25} className="w-full">
-                  <GlassSelect
-                    icon={<TrendingUp className="h-5 w-5 text-foreground/80" />}
-                    placeholder="Seniority level"
-                    value={seniority}
-                    onChange={setSeniority}
-                    options={[
-                      { value: "intern", label: "Intern" },
-                      { value: "entry", label: "Entry level" },
-                      { value: "mid", label: "Mid level" },
-                      { value: "senior", label: "Senior" },
-                      { value: "staff", label: "Staff / Principal" },
-                      { value: "lead", label: "Lead / Manager" },
-                      { value: "director", label: "Director+" },
-                    ]}
-                    label="Seniority"
-                  />
-                </BlurFade>
+                  <BlurFade inView={false} delay={0.25} className="w-full">
+                    <GlassSelect
+                      icon={
+                        <TrendingUp className="h-5 w-5 text-foreground/80" />
+                      }
+                      placeholder="Seniority level"
+                      value={seniority}
+                      onChange={setSeniority}
+                      options={[
+                        { value: "intern", label: "Intern" },
+                        { value: "entry", label: "Entry level" },
+                        { value: "mid", label: "Mid level" },
+                        { value: "senior", label: "Senior" },
+                        { value: "staff", label: "Staff / Principal" },
+                        { value: "lead", label: "Lead / Manager" },
+                        { value: "director", label: "Director+" },
+                      ]}
+                      label="Seniority"
+                    />
+                  </BlurFade>
 
-                <BlurFade inView={false} delay={0.3} className="w-full">
-                  <div className="flex gap-3">
-                    {["Remote", "Hybrid", "On-site"].map((opt) => (
+                  <BlurFade inView={false} delay={0.3} className="w-full">
+                    <div className="flex gap-3">
+                      {["Remote", "Hybrid", "On-site"].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() =>
+                            setWorkStyle(opt.toLowerCase().replace("-", ""))
+                          }
+                          className={cn(
+                            "flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 relative overflow-hidden",
+                            workStyle === opt.toLowerCase().replace("-", "")
+                              ? "text-foreground"
+                              : "text-foreground/50 hover:text-foreground/80",
+                          )}
+                          style={{
+                            background:
+                              workStyle === opt.toLowerCase().replace("-", "")
+                                ? "linear-gradient(-75deg, oklch(from var(--background) l c h / 15%), oklch(from var(--background) l c h / 30%), oklch(from var(--background) l c h / 15%))"
+                                : "linear-gradient(-75deg, oklch(from var(--background) l c h / 5%), oklch(from var(--background) l c h / 10%), oklch(from var(--background) l c h / 5%))",
+                            boxShadow:
+                              workStyle === opt.toLowerCase().replace("-", "")
+                                ? "inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), 0 0.25em 0.125em -0.125em oklch(from var(--foreground) l c h / 20%)"
+                                : "inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 2%)",
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </BlurFade>
+
+                  <BlurFade inView={false} delay={0.35} className="w-full">
+                    {formSubmitError && (
+                      <p className="text-sm text-red-400 text-center mb-3">
+                        {formSubmitError}
+                      </p>
+                    )}
+                    <div className="flex justify-between items-center">
                       <button
-                        key={opt}
                         type="button"
-                        onClick={() =>
-                          setWorkStyle(opt.toLowerCase().replace("-", ""))
-                        }
-                        className={cn(
-                          "flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 relative overflow-hidden",
-                          workStyle === opt.toLowerCase().replace("-", "")
-                            ? "text-foreground"
-                            : "text-foreground/50 hover:text-foreground/80",
-                        )}
-                        style={{
-                          background:
-                            workStyle === opt.toLowerCase().replace("-", "")
-                              ? "linear-gradient(-75deg, oklch(from var(--background) l c h / 15%), oklch(from var(--background) l c h / 30%), oklch(from var(--background) l c h / 15%))"
-                              : "linear-gradient(-75deg, oklch(from var(--background) l c h / 5%), oklch(from var(--background) l c h / 10%), oklch(from var(--background) l c h / 5%))",
-                          boxShadow:
-                            workStyle === opt.toLowerCase().replace("-", "")
-                              ? "inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 5%), 0 0.25em 0.125em -0.125em oklch(from var(--foreground) l c h / 20%)"
-                              : "inset 0 0.125em 0.125em oklch(from var(--foreground) l c h / 2%)",
-                        }}
+                        onClick={() => setStep("workExperience")}
+                        className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
                       >
-                        {opt}
+                        <ArrowLeft className="w-4 h-4" /> Go back
                       </button>
-                    ))}
-                  </div>
-                </BlurFade>
-
-                <BlurFade inView={false} delay={0.35} className="w-full">
-                  {formSubmitError && (
-                    <p className="text-sm text-red-400 text-center mb-3">
-                      {formSubmitError}
-                    </p>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <button
-                      type="button"
-                      onClick={() => setStep("workExperience")}
-                      className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
-                    >
-                      <ArrowLeft className="w-4 h-4" /> Go back
-                    </button>
-                    <GlassButton
-                      type="button"
-                      onClick={() => void submitFormAndOpenRevamp()}
-                      disabled={!canProceedPrefs || isSubmittingForm}
-                      contentClassName="flex items-center gap-2"
-                      className={cn(
-                        "transition-opacity",
-                        (!canProceedPrefs || isSubmittingForm) && "opacity-40",
-                      )}
-                    >
-                      {isSubmittingForm ? (
-                        <>
-                          <Loader className="w-4 h-4 animate-spin" /> Saving…
-                        </>
-                      ) : (
-                        <>
-                          Continue <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </GlassButton>
-                  </div>
-                </BlurFade>
+                      <GlassButton
+                        type="button"
+                        onClick={() => void submitFormAndOpenRevamp()}
+                        disabled={!canProceedPrefs || isSubmittingForm}
+                        contentClassName="flex items-center gap-2"
+                        className={cn(
+                          "transition-opacity",
+                          (!canProceedPrefs || isSubmittingForm) &&
+                            "opacity-40",
+                        )}
+                      >
+                        {isSubmittingForm ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" /> Saving…
+                          </>
+                        ) : (
+                          <>
+                            Continue <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </GlassButton>
+                    </div>
+                  </BlurFade>
                 </div>
               </div>
             </motion.div>

@@ -162,10 +162,7 @@ export function ResumeRevampStep({
   );
   const revealOnlyFlow = skipEarlierRevampStages || enteredViaRevealUrl;
 
-  const revealTitles = useMemo(
-    () => REVEAL_SLIDES.map((s) => s.title),
-    [],
-  );
+  const revealTitles = useMemo(() => REVEAL_SLIDES.map((s) => s.title), []);
   const [revealSlideIndex, setRevealSlideIndex] = useState(0);
 
   const fetchRevealResumeAllowed = useCallback(async (): Promise<boolean> => {
@@ -197,8 +194,7 @@ export function ResumeRevampStep({
     hasPrefilledParse || (hasRawFromOnboarding && !parseFromRawFailed);
 
   const [bootstrapFromRaw, setBootstrapFromRaw] = useState(
-    () =>
-      !revealOnlyFlow && hasRawFromOnboarding && !hasPrefilledParse,
+    () => !revealOnlyFlow && hasRawFromOnboarding && !hasPrefilledParse,
   );
 
   const [stage, setStage] = useState<RevampStage>(() => {
@@ -209,7 +205,8 @@ export function ResumeRevampStep({
     ) {
       return "awaitReveal";
     }
-    if (typeof window === "undefined") return skipUpload ? "questions" : "upload";
+    if (typeof window === "undefined")
+      return skipUpload ? "questions" : "upload";
     const hash = window.location.hash;
     // Only restore state if there's an explicit hash (meaning user refreshed)
     if (hash) {
@@ -255,7 +252,8 @@ export function ResumeRevampStep({
   // Run AI parse once when onboarding collected raw text (upload step does not parse).
   useEffect(() => {
     if (revealOnlyFlow) return;
-    if (hasPrefilledParse || !hasRawFromOnboarding || parseFromRawFailed) return;
+    if (hasPrefilledParse || !hasRawFromOnboarding || parseFromRawFailed)
+      return;
 
     let cancelled = false;
 
@@ -499,7 +497,9 @@ export function ResumeRevampStep({
           </div>
         </div>
       )}
-      <AnimatePresence mode="wait">
+      {/* Stage indicator removed - using reveal slides instead */}
+
+      <AnimatePresence mode="popLayout">
         {!skipUpload && stage === "upload" && (
           <motion.div
             key="upload"
@@ -587,26 +587,32 @@ export function ResumeRevampStep({
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 className="w-full max-w-xl space-y-3"
               >
-                {REVEAL_SLIDES[revealSlideIndex]?.items.map(({ Icon, text }, i) => (
-                  <motion.li
-                    key={i}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut", delay: i * 0.1 }}
-                    className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-4 shadow-md backdrop-blur-sm"
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.07]">
-                      <Icon
-                        className="h-5 w-5 text-emerald-300"
-                        strokeWidth={1.75}
-                        aria-hidden
-                      />
-                    </span>
-                    <span className="text-base font-medium leading-snug tracking-tight text-white/88">
-                      {text}
-                    </span>
-                  </motion.li>
-                ))}
+                {REVEAL_SLIDES[revealSlideIndex]?.items.map(
+                  ({ Icon, text }, i) => (
+                    <motion.li
+                      key={i}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut",
+                        delay: i * 0.1,
+                      }}
+                      className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-4 shadow-md backdrop-blur-sm"
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.07]">
+                        <Icon
+                          className="h-5 w-5 text-emerald-300"
+                          strokeWidth={1.75}
+                          aria-hidden
+                        />
+                      </span>
+                      <span className="text-base font-medium leading-snug tracking-tight text-white/88">
+                        {text}
+                      </span>
+                    </motion.li>
+                  ),
+                )}
               </motion.ul>
             </AnimatePresence>
           </motion.div>

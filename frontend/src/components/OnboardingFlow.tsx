@@ -742,6 +742,13 @@ const MentorqueLogo = () => (
 
 export function OnboardingFlow() {
   const [step, setStep] = useState<OnboardingStep>(() => {
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+      if (path === "/resume-revamp") return "resumeRevamp";
+      if (path === "/almost-ready") return "submitted";
+      if (path === "/onboarding-form") return "basics";
+      if (path === "/get-started" || path === "/") return "login";
+    }
     // If URL hash is #result or #questions, jump to resumeRevamp step
     if (
       typeof window !== "undefined" &&
@@ -855,6 +862,23 @@ export function OnboardingFlow() {
     targetRole.trim() && country.trim() && seniority && workStyle;
 
   const currentStepIndex = STEPS.indexOf(step);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let targetPath = "/get-started";
+    if (step === "resumeRevamp") targetPath = "/resume-revamp";
+    else if (step === "submitted") targetPath = "/almost-ready";
+    else if (
+      step === "basics" ||
+      step === "workExperience" ||
+      step === "jobPreferences"
+    ) {
+      targetPath = "/onboarding-form";
+    }
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState(null, "", targetPath);
+    }
+  }, [step]);
 
   const handleFinalSubmit = () => {
     setModalStatus("loading");

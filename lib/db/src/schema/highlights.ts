@@ -1,6 +1,17 @@
-import { pgTable, text, varchar, json, timestamp, integer } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  foreignKey,
+  integer,
+  json,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { onboardingSubmissionsTable, resumeReviewersTable } from "./onboarding";
+import { usersTable } from "./users";
 
 function generateCuid(): string {
   const ts = Date.now().toString(36);
@@ -36,19 +47,41 @@ export interface HighlightComment {
   createdAt: string;
 }
 
-export const highlightsTable = pgTable("pdf_highlights", {
-  id: varchar("id", { length: 50 })
-    .primaryKey()
-    .$defaultFn(() => generateCuid()),
-  userId: varchar("user_id", { length: 128 }),
-  documentUrl: text("document_url").notNull(),
-  pageNumber: integer("page_number").notNull().default(1),
-  position: json("position").$type<HighlightPosition>().notNull(),
-  content: json("content").$type<HighlightContent>().notNull(),
-  comments: json("comments").$type<HighlightComment[]>().notNull().default([]),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const highlightsTable = pgTable(
+  "review_comments",
+  {
+    id: varchar("id", { length: 50 })
+      .primaryKey()
+      .$defaultFn(() => generateCuid()),
+    userId: varchar("user_id", { length: 50 }).references(() => usersTable.id, {
+      onDelete: "set null",
+    }),
+    onboardingId: varchar("onboarding_id", { length: 50 }).references(
+      () => onboardingSubmissionsTable.id,
+      { onDelete: "cascade" },
+    ),
+    reviewerId: varchar("reviewer_id", { length: 50 }).references(
+      () => resumeReviewersTable.id,
+      { onDelete: "set null" },
+    ),
+    inReplyToId: varchar("in_reply_to_id", { length: 50 }),
+    isResolved: boolean("is_resolved").notNull().default(false),
+    documentUrl: text("document_url").notNull(),
+    pageNumber: integer("page_number").notNull().default(1),
+    position: json("position").$type<HighlightPosition>().notNull(),
+    content: json("content").$type<HighlightContent>().notNull(),
+    comments: json("comments").$type<HighlightComment[]>().notNull().default([]),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "review_comments_in_reply_to_fk",
+      columns: [table.inReplyToId],
+      foreignColumns: [table.id],
+    }),
+  ],
+);
 
 export const insertHighlightSchema = createInsertSchema(highlightsTable).omit({
   createdAt: true,

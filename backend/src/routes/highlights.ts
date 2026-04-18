@@ -3,16 +3,17 @@
  * Location: backend/src/routes/highlights.ts
  *
  * Endpoints:
- *   GET    /api/highlights?documentUrl=...  — fetch all highlights for a PDF
- *   POST   /api/highlights                  — save a new highlight + comments
+ *   GET    /api/highlights?documentUrl=...  — fetch all review comments for a PDF
+ *   POST   /api/highlights                  — save a new review comment
  *   DELETE /api/highlights/:id              — delete a highlight
+ *   PATCH  /api/highlights/:id/resolve      — resolve/unresolve thread
  *   POST   /api/highlights/ai-review        — AI review of selected text
  */
 
 import { Router, Request, Response } from "express";
 import { db } from "@workspace/db";
 import { highlightsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import OpenAI from "openai";
 
 const router = Router();
@@ -25,15 +26,37 @@ function getOpenAI(): OpenAI {
 
 // ─── GET /api/highlights ──────────────────────────────────────────────────────
 router.get("/", async (req: Request, res: Response) => {
-  const { documentUrl } = req.query;
-  if (!documentUrl || typeof documentUrl !== "string") {
-    return res.status(400).json({ success: false, message: "documentUrl query param required." });
-  }
+  const { documentUrl, onboardingId, reviewerId, inReplyToId, includeResolved } =
+    req.query;
+
   try {
-    const highlights = await db
-      .select()
-      .from(highlightsTable)
-      .where(eq(highlightsTable.documentUrl, documentUrl));
+    const filters = [];
+    if (typeof documentUrl === "string" && documentUrl.trim()) {
+      filters.push(eq(highlightsTable.documentUrl, documentUrl));
+    }
+    if (typeof onboardingId === "string" && onboardingId.trim()) {
+      filters.push(eq(highlightsTable.onboardingId, onboardingId));
+    }
+    if (typeof reviewerId === "string" && reviewerId.trim()) {
+      filters.push(eq(highlightsTable.reviewerId, reviewerId));
+    }
+    if (typeof inReplyToId === "string" && inReplyToId.trim()) {
+      filters.push(eq(highlightsTable.inReplyToId, inReplyToId));
+    }
+    if (includeResolved !== "true") {
+      filters.push(eq(highlightsTable.isResolved, false));
+    }
+
+    const whereExpr =
+      filters.length === 0
+        ? undefined
+        : filters.length === 1
+          ? filters[0]
+          : and(...filters);
+
+    const highlights = whereExpr
+      ? await db.select().from(highlightsTable).where(whereExpr)
+      : await db.select().from(highlightsTable);
     return res.json({ success: true, highlights });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
@@ -42,7 +65,17 @@ router.get("/", async (req: Request, res: Response) => {
 
 // ─── POST /api/highlights ─────────────────────────────────────────────────────
 router.post("/", async (req: Request, res: Response) => {
-  const { documentUrl, position, content, comments } = req.body;
+  const {
+    documentUrl,
+    position,
+    content,
+    comments,
+    userId,
+    onboardingId,
+    reviewerId,
+    inReplyToId,
+    isResolved,
+  } = req.body;
 
   if (!documentUrl || !position || !content) {
     return res.status(400).json({
@@ -55,6 +88,11 @@ router.post("/", async (req: Request, res: Response) => {
     const [highlight] = await db
       .insert(highlightsTable)
       .values({
+        userId: userId ?? null,
+        onboardingId: onboardingId ?? null,
+        reviewerId: reviewerId ?? null,
+        inReplyToId: inReplyToId ?? null,
+        isResolved: Boolean(isResolved),
         documentUrl,
         pageNumber: position.pageNumber ?? 1,
         position,
@@ -109,6 +147,31 @@ router.delete("/:id", async (req: Request, res: Response) => {
   try {
     await db.delete(highlightsTable).where(eq(highlightsTable.id, id));
     return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── PATCH /api/highlights/:id/resolve ─────────────────────────────────────────
+router.patch("/:id/resolve", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { isResolved } = req.body ?? {};
+  if (typeof isResolved !== "boolean") {
+    return res
+      .status(400)
+      .json({ success: false, message: "isResolved boolean is required." });
+  }
+
+  try {
+    const [highlight] = await db
+      .update(highlightsTable)
+      .set({
+        isResolved,
+        updatedAt: new Date(),
+      })
+      .where(eq(highlightsTable.id, id))
+      .returning();
+    return res.json({ success: true, highlight });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
   }

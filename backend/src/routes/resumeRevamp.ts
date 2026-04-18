@@ -14,6 +14,8 @@
 
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { parsePdfToText } from '../lib/pdfParser';
 import { parseResumeText } from '../lib/resumeParser';
 import {
@@ -24,6 +26,31 @@ import {
 } from '../lib/resumeRevampAI';
 
 const router = Router();
+const FALLBACK_PDF_NAME = '8e256776-bf9e-46e2-948c-6e072e22f307.pdf';
+
+function isAiLimitError(err: unknown): boolean {
+  const message = String((err as any)?.message ?? '').toLowerCase();
+  return (
+    message.includes('rate limit') ||
+    message.includes('quota') ||
+    message.includes('insufficient_quota') ||
+    message.includes('too many requests') ||
+    message.includes('tokens per min') ||
+    message.includes('limit exceeded')
+  );
+}
+
+function resolveFallbackPdfPath(): string {
+  const candidates = [
+    path.resolve(process.cwd(), 'backend', FALLBACK_PDF_NAME),
+    path.resolve(process.cwd(), FALLBACK_PDF_NAME),
+  ];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) {
+    throw new Error(`Fallback PDF not found: ${FALLBACK_PDF_NAME}`);
+  }
+  return found;
+}
 
 // ─── Sanitize resume before sending to compiler ───────────────────────────────
 // Fills in blank required fields that the ResumeCompiler validates strictly.
@@ -176,6 +203,16 @@ router.post('/revamp', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error('[resume-revamp/revamp] Error:', err);
+    if (isAiLimitError(err)) {
+      return res.status(200).json({
+        success: true,
+        aiLimitFallback: true,
+        message: 'AI limit reached. Served fallback PDF.',
+        revampedResume: req.body?.parsedResume ?? null,
+        changes: [],
+        compiledPdfUrl: '/api/resume-revamp/fallback-pdf',
+      });
+    }
     return res.status(500).json({ success: false, message: err.message || 'Failed to revamp resume.' });
   }
 });
@@ -250,7 +287,25 @@ router.get('/proxy-pdf', async (req: Request, res: Response) => {
       'Content-Length': String(buffer.byteLength),
       'Cache-Control': 'no-store',
     });
-    res.send(Buffer.from(buffer));
+    return res.send(Buffer.from(buffer));
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /fallback-pdf ────────────────────────────────────────────────────────
+// Returns a hardcoded local PDF when AI limits are exceeded.
+router.get('/fallback-pdf', (_req: Request, res: Response) => {
+  try {
+    const fallbackPath = resolveFallbackPdfPath();
+    const file = readFileSync(fallbackPath);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+      'Content-Length': String(file.byteLength),
+      'Cache-Control': 'no-store',
+    });
+    return res.send(file);
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
   }
